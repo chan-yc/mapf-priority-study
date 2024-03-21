@@ -1,0 +1,43 @@
+name: maai_group
+
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+
+dependencies:
+  - python 3.9
+
+  ### use veclib for Apple Silicon, see https://stackoverflow.com/a/70255105
+  - blas=*=*accelerate*
+  - numpy==1.21.6
+
+  ### Install from pytorch channel to supoort Apple Silicon
+  - pytorch::pytorch
+
+  ### Cuda for Linux / Windows
+  ### Choose your cuda version
+  # - pytorch-cuda=11.8
+  # - pytorch-cuda=12.1
+
+  ### Install with Pip
+  - pip
+  - pip:
+    - wheel==0.38.4
+    - setuptools==65.5.1
+    - Cython==0.29.28
+    - protobuf==3.20.3
+    - pyglet==1.5.14
+    - gym==0.21.0
+    - imageio==2.9.0
+    - ipdb==0.13.9
+    - matplotlib==3.3.2
+    - networkx==2.8.8
+    - ray==1.8.0
+    - setproctitle==1.2.2
+    - wandb==0.12.14
+    - tensorboard
+    - flake8
+    - ipython
+    - jupyter
+    - jupyterlab
