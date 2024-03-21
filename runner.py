@@ -8,7 +8,8 @@ from mapf_gym import MAPFEnv
 from model import Model
 from od_mstar3 import od_mstar
 from od_mstar3.col_set_addition import OutOfTimeError, NoSolutionError
-from util import one_step, update_perf, reset_env,set_global_seeds
+from util import (one_step, update_perf, reset_env, set_global_seeds,
+                  get_torch_device)
 
 
 @ray.remote(num_cpus=1, num_gpus=SetupParameters.NUM_GPU / (TrainingParameters.N_ENVS + 1))
@@ -28,7 +29,7 @@ class Runner(object):
         self.env = MAPFEnv(num_agents=self.num_agent)
         self.imitation_env = MAPFEnv(num_agents=self.imitation_num_agent)
 
-        self.local_device = torch.device('cuda') if SetupParameters.USE_GPU_LOCAL else torch.device('cpu')
+        self.local_device = get_torch_device(SetupParameters.USE_GPU_LOCAL)
         self.local_model = Model(env_id, self.local_device)
         self.hidden_state = (
             torch.zeros((self.num_agent, NetParameters.NET_SIZE // 2)).to(self.local_device),
@@ -62,7 +63,7 @@ class Runner(object):
                 mb_vector.append(self.vector)
                 mb_hidden_state.append(
                     [self.hidden_state[0].cpu().detach().numpy(), self.hidden_state[1].cpu().detach().numpy()])
-                mb_message.append(self.message)
+                mb_message.append(self.message.cpu())
                 actions, ps, values_in, values_ex, values_all, pre_block, self.hidden_state, num_invalid, self.message = \
                     self.local_model.step(self.obs, self.vector, self.valid_actions, self.hidden_state,
                                           self.episodic_buffer.no_reward, self.message, self.num_agent)

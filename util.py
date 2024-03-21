@@ -209,3 +209,12 @@ def update_perf(one_episode_perf, performance_dict, num_on_goals, max_on_goals, 
     performance_dict['rewarded_rate'].append(
         one_episode_perf['reward_count'] / (one_episode_perf['num_step'] * num_agent))
     return performance_dict
+
+
+def get_torch_device(use_gpu=False):
+    if use_gpu:
+        if torch.cuda.is_available():
+            return torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            return torch.device('mps')
+    return torch.device('cpu')

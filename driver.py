@@ -13,7 +13,8 @@ from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
 from runner import Runner
-from util import set_global_seeds, write_to_tensorboard, write_to_wandb, make_gif, reset_env, one_step, update_perf
+from util import (set_global_seeds, write_to_tensorboard, write_to_wandb,
+                  make_gif, reset_env, one_step, update_perf, get_torch_device)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 ray.init(num_gpus=SetupParameters.NUM_GPU)
@@ -64,8 +65,8 @@ def main():
     set_global_seeds(SetupParameters.SEED)
 
     # create classes
-    global_device = torch.device('cuda') if SetupParameters.USE_GPU_GLOBAL else torch.device('cpu')
-    local_device = torch.device('cuda') if SetupParameters.USE_GPU_LOCAL else torch.device('cpu')
+    global_device = get_torch_device(use_gpu=SetupParameters.USE_GPU_GLOBAL)
+    local_device = get_torch_device(use_gpu=SetupParameters.USE_GPU_LOCAL)
     global_model = Model(0, global_device, True)
 
     if RecordingParameters.RETRAIN:

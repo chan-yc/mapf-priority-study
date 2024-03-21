@@ -123,9 +123,9 @@ class Model(object):
         vector = torch.from_numpy(vector).to(self.device)
         message = torch.from_numpy(message).to(self.device)
 
-        returns_in = torch.from_numpy(returns_in).to(self.device)
-        returns_ex = torch.from_numpy(returns_ex).to(self.device)
-        returns_all = torch.from_numpy(returns_all).to(self.device)
+        returns_in = torch.from_numpy(returns_in).float().to(self.device)
+        returns_ex = torch.from_numpy(returns_ex).float().to(self.device)
+        returns_all = torch.from_numpy(returns_all).float().to(self.device)
 
         old_v_in = torch.from_numpy(old_v_in).to(self.device)
         old_v_ex = torch.from_numpy(old_v_ex).to(self.device)
