@@ -75,7 +75,7 @@ class RecordingParameters:
     RETRAIN = False
     WANDB =  True
     TENSORBOARD = True
-    TXT_WRITER =  True
+    TXT_WRITER = True
     ENTITY = 'yutong'
     TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
     EXPERIMENT_PROJECT = 'MAPF'
@@ -91,8 +91,8 @@ class RecordingParameters:
     GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
     SUMMARY_PATH = './summaries' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
     TXT_NAME = 'alg.txt'
-    LOSS_NAME = ['all_loss', 'policy_loss', 'policy_entropy', 'critic_loss_in', 'critic_loss_ex', 'valid_loss',
-                 'blocking_loss', 'clipfrac',
+    LOSS_NAME = ['all_loss', 'policy_loss', 'policy_entropy', 'critic_loss_in',
+                 'critic_loss_ex', 'valid_loss', 'blocking_loss', 'clipfrac',
                  'grad_norm', 'advantage']
 
 

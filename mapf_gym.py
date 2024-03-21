@@ -87,8 +87,8 @@ class State(object):
         guide_map = np.zeros((4, obs_shape[0], obs_shape[1]))  # heuristic maps
         visible_agents = []
 
-        for i in range(top_left[0], top_left[0] + EnvParameters.FOV_SIZE):  # top and bottom 
-            for j in range(top_left[1], top_left[1] + EnvParameters.FOV_SIZE):  # left and right 
+        for i in range(top_left[0], top_left[0] + EnvParameters.FOV_SIZE):  # top and bottom
+            for j in range(top_left[1], top_left[1] + EnvParameters.FOV_SIZE):  # left and right
                 scaned_agent = [index for (index, value) in enumerate(curr_position) if value == (i, j)]
                 if i >= self.state.shape[0] or i < 0 or j >= self.state.shape[1] or j < 0:
                     # out of bounds
@@ -654,7 +654,7 @@ class State(object):
                     if right not in open_list:
                         open_list.append(right)
 
-        self.heuri_map = np.zeros((self.num_agents, 4, *self.state.shape), dtype=np.bool)
+        self.heuri_map = np.zeros((self.num_agents, 4, *self.state.shape), dtype=np.bool_)
 
         for x in range(self.state.shape[0]):
             for y in range(self.state.shape[1]):
