@@ -260,7 +260,7 @@ class Runner(object):
             mb_obs.append(obs)
             mb_vector.append(vector)
             mb_hidden_state.append([hidden_state[0].cpu().detach().numpy(), hidden_state[1].cpu().detach().numpy()])
-            mb_message.append(message)
+            mb_message.append(message.cpu().detach().numpy())  # Move message tensor to CPU
 
             hidden_state, message = self.local_model.generate_state(obs, vector, hidden_state, message)
 

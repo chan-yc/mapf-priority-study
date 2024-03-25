@@ -1,4 +1,4 @@
-name: maai_group
+name: maai
 
 channels:
   - pytorch
@@ -20,18 +20,21 @@ dependencies:
   # - pytorch-cuda=11.8
   # - pytorch-cuda=12.1
 
+  # Install pytorch on Linux, run on terminal
+  # pip3 install torch torchvision torchaudio
+
+
   ### Install with Pip
   - pip
   - pip:
-    - wheel==0.38.4
-    - setuptools==65.5.1
+    - setuptools==65.5.0 "wheel<0.40.0"
     - Cython==0.29.28
     - protobuf==3.20.3
     - pyglet==1.5.14
     - gym==0.21.0
     - imageio==2.9.0
     - ipdb==0.13.9
-    - matplotlib==3.3.2
+    - matploptlib
     - networkx==2.8.8
     - ray==1.8.0
     - setproctitle==1.2.2

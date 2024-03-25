@@ -306,6 +306,7 @@ class State(object):
             diffs.append(np.sum(v - pre_value))  # the state value difference between time step t and t+1
 
         distance = np.asarray(distance) / (np.sum(distance) + 1e-6)
+        # TODO change the priority prob
         diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance
         diff_dis = F.softmax(torch.from_numpy(diffs), dim=-1)  # the final priority probability
         diff_dis = diff_dis.detach().numpy()
@@ -775,10 +776,13 @@ class MAPFEnv(gym.Env):
 
         prob = np.random.triangular(self.PROB[0], .33 * self.PROB[0] + .66 * self.PROB[1],
                                     self.PROB[1])  # sample a value from triangular distribution
+
         size = np.random.choice([self.SIZE[0], self.SIZE[0] * .5 + self.SIZE[1] * .5, self.SIZE[1]],
                                 p=[.5, .25, .25])  # sample a value according to the given probability
+
         # prob = self.PROB
         # size = self.SIZE  # fixed world0 size and obstacle density for evaluation
+
         world = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
 
         # randomize the position of agents
