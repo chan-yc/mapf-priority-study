@@ -108,8 +108,7 @@ if __name__ == "__main__":
         episodic_buffer = EpisodicBuffer(2e6, k[0])
 
         all_perf_dict = {'episode_len': [], 'max_goals': [], 'collide': [], 'success_rate': []}
-        all_perf_dict_std = {'episode_len': [], 'max_goals': [], 'collide': []}
-        print('agent: {}, world: {}, obstacle: {}'.format(k[0], k[1], k[2]))
+        print(f'agent: {k[0]}, world: {k[1]}, obstacle: {k[2]}')
 
         for j in range(NUM_TIMES):
             eval_performance_dict = evaluate(env, model, torch.device('cpu'), episodic_buffer, k[0], save_gif)
@@ -126,19 +125,25 @@ if __name__ == "__main__":
                 else:
                     all_perf_dict[i].append(eval_performance_dict[i])
 
+        all_perf_mean = {}
+        all_perf_std = {}
         for i in all_perf_dict.keys():  # for all episodes
             if i != 'success_rate':
-                all_perf_dict_std[i] = np.std(all_perf_dict[i])
-            all_perf_dict[i] = np.nanmean(all_perf_dict[i])
+                all_perf_std[i] = np.std(all_perf_dict[i])
+            all_perf_mean[i] = np.nanmean(all_perf_dict[i])
 
-        print('EL: {}, MR: {}, CO: {},SR:{}'.format(round(all_perf_dict['episode_len'], 2),
-                                                    round(all_perf_dict['max_goals'], 2),
-                                                    round(all_perf_dict['collide'] * 100, 2),
-                                                    all_perf_dict['success_rate'] * 100))
-        print('EL_STD: {}, MR_STD: {}, CO_STD: {}'.format(round(all_perf_dict_std['episode_len'], 2),
-                                                          round(all_perf_dict_std['max_goals'], 2),
-                                                          round(all_perf_dict_std['collide'] * 100, 2)))
-        print('-----------------------------------------------------------------------------------------------')
+        mean_log = f"EL: {round(all_perf_mean['episode_len'], 2)}, "
+                   f"MR: {round(all_perf_mean['max_goals'], 2)}, "
+                   f"CO: {round(all_perf_mean['collide'] * 100, 2)}, "
+                   f"SR: {all_perf_mean['success_rate'] * 100}"
+
+        std_log = f"EL_STD: {round(all_perf_std['episode_len'], 2)}, "
+                  f"MR_STD: {round(all_perf_std['max_goals'], 2)}, "
+                  f"CO_STD: {round(all_perf_std['collide'] * 100, 2)}"
+
+        print(mean_log)
+        print(std_log)
+        print('-' * 80)
 
     print('finished')
     wandb.finish()
