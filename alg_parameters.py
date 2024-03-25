@@ -4,7 +4,7 @@ import datetime
 
 
 class EnvParameters:
-    N_AGENTS = 8  # number of agents used in training
+    N_AGENTS = 8 # number of agents used in training
     N_ACTIONS = 5
     EPISODE_LEN = 256  # maximum episode length in training
     FOV_SIZE = 3
@@ -29,9 +29,9 @@ class TrainingParameters:
     POLICY_COEF = 10
     VALID_COEF = 0.5
     BLOCK_COEF = 0.5
-    N_EPOCHS = 10
-    N_ENVS = 16  # number of processes
-    N_MAX_STEPS = 3e7  # maximum number of time steps used in training
+    N_EPOCHS = 5
+    N_ENVS = 2  # number of processes
+    N_MAX_STEPS = 1e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
     MINIBATCH_SIZE = int(2 ** 10)
     DEMONSTRATION_PROB = 0.1  # imitation learning rate
@@ -50,7 +50,7 @@ class NetParameters:
     D_K = 32
     D_V = 32
 
-
+# TODO Examinate the distance factor! Add more factors if needed
 class TieBreakingParameters:
     DIST_FACTOR = 0.1
 
@@ -66,7 +66,7 @@ class IntrinsicParameters:
 
 class SetupParameters:
     SEED = 1234
-    USE_GPU_LOCAL = False
+    USE_GPU_LOCAL = True
     USE_GPU_GLOBAL = True
     NUM_GPU = 1
 
@@ -76,10 +76,10 @@ class RecordingParameters:
     WANDB =  True
     TENSORBOARD = True
     TXT_WRITER = True
-    ENTITY = 'yutong'
+    ENTITY = 'ruibo'
     TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
     EXPERIMENT_PROJECT = 'MAPF'
-    EXPERIMENT_NAME = 'SCRIMP'
+    EXPERIMENT_NAME = 'SCRIMP_UPDATE'
     EXPERIMENT_NOTE = ''
     SAVE_INTERVAL = 5e5  # interval of saving model
     BEST_INTERVAL = 0  # interval of saving model with the best performance
