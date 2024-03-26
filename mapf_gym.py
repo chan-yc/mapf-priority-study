@@ -1053,7 +1053,7 @@ class MAPFEnv(gym.Env):
         c = {a + 1: hsv_to_rgb(np.array([a / float(self.num_agents), 1, 1])) for a in range(self.num_agents)}
         return c
 
-    def _render(self, mode='human', close=False, screen_width=800, screen_height=800, action_probs=None):
+    def _render(self, mode='rgb_array', close=False, screen_width=900, screen_height=900, action_probs=None):
         if close:
             return
         # values is an optional parameter which provides a visualization for the value of each agent per step

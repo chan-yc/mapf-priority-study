@@ -1,3 +1,4 @@
+import os
 import random
 
 import imageio
@@ -152,7 +153,8 @@ def reset_env(env, num_agent):
     done = env._reset(num_agent)
     prev_action = np.zeros(num_agent)
     valid_actions = []
-    obs = np.zeros((1, num_agent, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE, EnvParameters.FOV_SIZE), dtype=np.float32)
+    obs = np.zeros((1, num_agent, NetParameters.NUM_CHANNEL, EnvParameters.FOV_SIZE,
+                    EnvParameters.FOV_SIZE), dtype=np.float32)
     vector = np.zeros((1, num_agent, NetParameters.VECTOR_LEN), dtype=np.float32)
     train_valid = np.zeros((num_agent, EnvParameters.N_ACTIONS), dtype=np.float32)
 
@@ -218,3 +220,25 @@ def get_torch_device(use_gpu=False):
         elif torch.backends.mps.is_available():
             return torch.device('mps')
     return torch.device('cpu')
+
+
+def interval_has_elapsed(curr_step, last_step, interval):
+    """Check if the interval has elapsed"""
+    return curr_step - last_step >= interval
+
+
+def ensure_directory(dir_path):
+    """Ensure the directory exists"""
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+
+def save_net(net_dir, model, curr_steps, curr_episodes, performance):
+    ensure_directory(net_dir)
+    net_path = net_dir + "/net_checkpoint.pkl"
+    net_checkpoint = {"model": model.network.state_dict(),
+                      "optimizer": model.net_optimizer.state_dict(),
+                      "step": curr_steps,
+                      "episode": curr_episodes,
+                      "reward": performance['per_r']}
+    torch.save(net_checkpoint, net_path)

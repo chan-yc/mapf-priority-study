@@ -47,10 +47,11 @@ def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
     hidden_state = (torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device),
                     torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device))
 
-    if save_gif0:
-        episode_frames.append(eval_env._render(mode='rgb_array', screen_width=900, screen_height=900))
-
     while not done:
+
+        if save_gif0:
+            episode_frames.append(eval_env._render())
+
         actions, hidden_state, v_all, ps, message = model0.final_evaluate(obs, vector, hidden_state, message, num_agent,
                                                                           greedy=False)
 
@@ -65,8 +66,6 @@ def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
         vector[:, :, 4] = intrinsic_reward
         vector[:, :, 5] = min_dist
 
-        if save_gif0:
-            episode_frames.append(eval_env._render(mode='rgb_array', screen_width=900, screen_height=900))
 
         if done:
             if one_episode_perf['episode_len'] < EnvParameters.EPISODE_LEN - 1:
@@ -77,9 +76,9 @@ def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
             if save_gif0:
                 if not os.path.exists(RecordingParameters.GIFS_PATH):
                     os.makedirs(RecordingParameters.GIFS_PATH)
+                episode_frames.append(eval_env._render())
                 images = np.array(episode_frames)
-                make_gif(images, '{}/evaluation.gif'.format(
-                    RecordingParameters.GIFS_PATH))
+                make_gif(images, f'{ RecordingParameters.GIFS_PATH}/evaluation.gif')
 
     return one_episode_perf
 
