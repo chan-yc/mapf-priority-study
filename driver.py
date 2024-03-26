@@ -8,13 +8,15 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 import wandb
 
-from alg_parameters import *
+from alg_parameters import (SetupParameters, EnvParameters, TrainingParameters,
+                            NetParameters, RecordingParameters, all_args)
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
 from runner import Runner
 from util import (set_global_seeds, write_to_tensorboard, write_to_wandb,
                   make_gif, reset_env, one_step, update_perf, get_torch_device)
+
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 ray.init(num_gpus=SetupParameters.NUM_GPU)
@@ -23,7 +25,8 @@ print("Welcome to SCRIMP on MAPF!\n")
 
 def main():
     """main code"""
-    # preparing for training
+
+    # Prepare for training
     if RecordingParameters.RETRAIN:
         restore_path = './local_model'
         net_path_checkpoint = restore_path + "/net_checkpoint.pkl"
@@ -60,11 +63,12 @@ def main():
                 f.write(str(all_args))
             print('Logging txt...\n')
 
-    setproctitle.setproctitle(
-        RecordingParameters.EXPERIMENT_PROJECT + RecordingParameters.EXPERIMENT_NAME + "@" + RecordingParameters.ENTITY)
     set_global_seeds(SetupParameters.SEED)
+    setproctitle.setproctitle(RecordingParameters.EXPERIMENT_PROJECT
+                              + RecordingParameters.EXPERIMENT_NAME + "@"
+                              + RecordingParameters.ENTITY)
 
-    # create classes
+    # Create classes
     global_device = get_torch_device(use_gpu=SetupParameters.USE_GPU_GLOBAL)
     local_device = get_torch_device(use_gpu=SetupParameters.USE_GPU_LOCAL)
     global_model = Model(0, global_device, True)
@@ -82,144 +86,118 @@ def main():
         curr_episodes = net_dict["episode"]
         best_perf = net_dict["reward"]
     else:
-        curr_steps = curr_episodes = best_perf = 0
+        curr_steps, curr_episodes, best_perf = 0, 0, 0
 
-    update_done = True
-    demon = True
-    job_list = []
     last_test_t = -RecordingParameters.EVAL_INTERVAL - 1
     last_model_t = -RecordingParameters.SAVE_INTERVAL - 1
     last_best_t = -RecordingParameters.BEST_INTERVAL - 1
     last_gif_t = -RecordingParameters.GIF_INTERVAL - 1
 
-    # start training
+    # Start training
     try:
         while curr_steps < TrainingParameters.N_MAX_STEPS:
-            if update_done:
-                # start a data collection
-                if global_device != local_device:
-                    net_weights = global_model.network.to(local_device).state_dict()
-                    global_model.network.to(global_device)
-                else:
-                    net_weights = global_model.network.state_dict()
-                net_weights_id = ray.put(net_weights)
-                curr_steps_id = ray.put(curr_steps)
-                demon_probs = np.random.rand()
-                if demon_probs < TrainingParameters.DEMONSTRATION_PROB:
-                    demon = True
-                    for i, env in enumerate(envs):
-                        job_list.append(env.imitation.remote(net_weights_id, curr_steps_id))
-                else:
-                    demon = False
-                    for i, env in enumerate(envs):
-                        job_list.append(env.run.remote(net_weights_id, curr_steps_id))
+            # Collect network weights
+            if global_device != local_device:
+                net_weights = global_model.network.to(local_device).state_dict()
+                global_model.network.to(global_device)
+            else:
+                net_weights = global_model.network.state_dict()
+            net_weights_id = ray.put(net_weights)
+            curr_steps_id = ray.put(curr_steps)
 
-            # get data from multiple processes
-            done_id, job_list = ray.wait(job_list, num_returns=TrainingParameters.N_ENVS)
-            update_done = True if job_list == [] else False
-            done_len = len(done_id)
-            job_results = ray.get(done_id)
-            if demon:
-                # get imitation learning data
-                mb_obs, mb_vector, mb_actions, mb_hidden_state = [], [], [], []
-                mb_message = []
-                for results in range(done_len):
-                    mb_obs.append(job_results[results][0])
-                    mb_vector.append(job_results[results][1])
-                    mb_actions.append(job_results[results][2])
-                    mb_hidden_state.append(job_results[results][3])
-                    mb_message.append(job_results[results][4])
-                    curr_episodes += job_results[results][-2]
-                    curr_steps += job_results[results][-1]
-                mb_obs = np.concatenate(mb_obs, axis=0)
-                mb_vector = np.concatenate(mb_vector, axis=0)
-                mb_hidden_state = np.concatenate(mb_hidden_state, axis=0)
-                mb_actions = np.concatenate(mb_actions, axis=0)
-                mb_message = np.concatenate(mb_message, axis=0)
+            # Decide whether to use imitation learning for this iteration
+            imitation = np.random.rand() < TrainingParameters.IMITATION_LEARNING_RATE
+            if imitation:  # Compute imitation learning data using ODrM*
+                jobs = [env.imitation.remote(net_weights_id, curr_steps_id) for env in envs]
+            else:  # Compute reinforcement learning data
+                jobs = [env.run.remote(net_weights_id, curr_steps_id) for env in envs]
 
-                # training of imitation learning
+            # Wait for all jobs to finish and collect results
+            done_jobs, _ = ray.wait(jobs, num_returns=TrainingParameters.N_ENVS)
+            job_results = ray.get(done_jobs)
+
+            # Get imitation learning data
+            if imitation:
+                # Mini-batch imitation data
+                # obs, vector, actions, hid_states, message
+                mb_imit_data = [[] for _ in range(5)]
+
+                # Append mini-batch data
+                for result in job_results:
+                    for i in range(len(mb_imit_data)):
+                        mb_imit_data[i].append(result[i])
+                    curr_episodes += result[-2]
+                    curr_steps += result[-1]
+
+                # Concatenate mini-batch data
+                for i in range(len(mb_imit_data)):
+                    mb_imit_data[i] = np.concatenate(mb_imit_data[i], axis=0)
+
+                # Training using imitation learning data
+                data_len = len(mb_imit_data[0])
                 mb_imitation_loss = []
-                for start in range(0, np.shape(mb_obs)[0], TrainingParameters.MINIBATCH_SIZE):
+                for start in range(0, data_len, TrainingParameters.MINIBATCH_SIZE):
                     end = start + TrainingParameters.MINIBATCH_SIZE
-                    slices = (arr[start:end] for arr in
-                              (mb_obs, mb_vector, mb_actions, mb_hidden_state, mb_message))
-                    mb_imitation_loss.append(global_model.imitation_train(*slices))
+                    batch_data = [arr[start:end] for arr in mb_imit_data]
+                    loss = global_model.imitation_train(*batch_data)
+                    mb_imitation_loss.append(loss)
                 mb_imitation_loss = np.nanmean(mb_imitation_loss, axis=0)
 
-                # record training result
+                # Record training result
                 if RecordingParameters.WANDB:
                     write_to_wandb(curr_steps, imitation_loss=mb_imitation_loss, evaluate=False)
                 if RecordingParameters.TENSORBOARD:
                     write_to_tensorboard(global_summary, curr_steps, imitation_loss=mb_imitation_loss, evaluate=False)
+
+            # Get reinforcement learning data
             else:
-                # get reinforcement learning data
-                curr_steps += done_len * TrainingParameters.N_STEPS
-                mb_obs, mb_vector, mb_returns_in, mb_returns_ex, mb_returns_all, mb_values_in, \
-                    mb_values_ex, mb_values_all, mb_actions, mb_ps, mb_hidden_state, mb_train_valid,\
-                    mb_blocking = [], [], [], [], [], [], [], [], [], [], [], [], []
-                mb_message = []
-                performance_dict = {'per_r': [], 'per_in_r': [], 'per_ex_r': [], 'per_valid_rate': [],
-                                    'per_episode_len': [], 'per_block': [],
-                                    'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [],
-                                    'per_block_acc': [], 'per_max_goals': [], 'per_num_collide': [],
-                                    'rewarded_rate': []}
-                for results in range(done_len):
-                    mb_obs.append(job_results[results][0])
-                    mb_vector.append(job_results[results][1])
-                    mb_returns_in.append(job_results[results][2])
-                    mb_returns_ex.append(job_results[results][3])
-                    mb_returns_all.append(job_results[results][4])
-                    mb_values_in.append(job_results[results][5])
-                    mb_values_ex.append(job_results[results][6])
-                    mb_values_all.append(job_results[results][7])
-                    mb_actions.append(job_results[results][8])
-                    mb_ps.append(job_results[results][9])
-                    mb_hidden_state.append(job_results[results][10])
-                    mb_train_valid.append(job_results[results][11])
-                    mb_blocking.append(job_results[results][12])
-                    mb_message.append(job_results[results][13])
-                    curr_episodes += job_results[results][-2]
-                    for i in performance_dict.keys():
-                        performance_dict[i].append(np.nanmean(job_results[results][-1][i]))
+                # Mini-batch RL data
+                # obs, vector, returns_in, returns_ex, returns_all, values_in,
+                # values_ex, values_all, actions, ps, hid_states, train_valid,
+                # blocking, message
+                mb_rl_data = [[] for _ in range(14)]
+                metrics = {
+                    'per_r': [], 'per_in_r': [], 'per_ex_r': [], 'per_valid_rate': [],
+                    'per_episode_len': [], 'per_block': [], 'per_leave_goal': [],
+                    'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
+                    'per_max_goals': [], 'per_num_collide': [], 'rewarded_rate': []
+                }
 
-                for i in performance_dict.keys():
-                    performance_dict[i] = np.nanmean(performance_dict[i])
+                # Append mini-batch data
+                for result in job_results:
+                    for i in range(len(mb_rl_data)):
+                        mb_rl_data[i].append(result[i])
+                    curr_episodes += result[-2]
+                    for metric in metrics.keys():
+                        metrics[metric].append(np.nanmean(result[-1][metric]))
 
-                mb_obs = np.concatenate(mb_obs, axis=0)
-                mb_vector = np.concatenate(mb_vector, axis=0)
-                mb_returns_in = np.concatenate(mb_returns_in, axis=0)
-                mb_returns_ex = np.concatenate(mb_returns_ex, axis=0)
-                mb_returns_all = np.concatenate(mb_returns_all, axis=0)
-                mb_values_in = np.concatenate(mb_values_in, axis=0)
-                mb_values_ex = np.concatenate(mb_values_ex, axis=0)
-                mb_values_all = np.concatenate(mb_values_all, axis=0)
-                mb_actions = np.concatenate(mb_actions, axis=0)
-                mb_ps = np.concatenate(mb_ps, axis=0)
-                mb_hidden_state = np.concatenate(mb_hidden_state, axis=0)
-                mb_train_valid = np.concatenate(mb_train_valid, axis=0)
-                mb_blocking = np.concatenate(mb_blocking, axis=0)
-                mb_message = np.concatenate(mb_message, axis=0)
+                for i in metrics.keys():
+                    metrics[i] = np.nanmean(metrics[i])
 
-                # training of reinforcement learning
+                curr_steps += len(done_jobs) * TrainingParameters.N_STEPS
+
+                # Concatenate mini-batch data
+                for i in range(len(mb_rl_data)):
+                    mb_rl_data[i] = np.concatenate(mb_rl_data[i], axis=0)
+
+                # Training using reinforcement learning data
                 mb_loss = []
-                inds = np.arange(done_len * TrainingParameters.N_STEPS)
+                data_len = len(done_jobs) * TrainingParameters.N_STEPS
                 for _ in range(TrainingParameters.N_EPOCHS):
-                    np.random.shuffle(inds)
-                    for start in range(0, done_len * TrainingParameters.N_STEPS, TrainingParameters.MINIBATCH_SIZE):
-                        end = start + TrainingParameters.MINIBATCH_SIZE
-                        mb_inds = inds[start:end]
-                        slices = (arr[mb_inds] for arr in
-                                  (mb_obs, mb_vector, mb_returns_in, mb_returns_ex, mb_returns_all, mb_values_in,
-                                   mb_values_ex, mb_values_all, mb_actions, mb_ps, mb_hidden_state,
-                                   mb_train_valid, mb_blocking, mb_message))
-                        mb_loss.append(global_model.train(*slices))
+                    # Shuffle data sequence
+                    idx = np.random.choice(data_len, size=data_len, replace=False)
+                    for start in range(0, data_len, TrainingParameters.MINIBATCH_SIZE):
+                        batch_idx = idx[start:start+TrainingParameters.MINIBATCH_SIZE]
+                        batch_data = [arr[batch_idx] for arr in mb_rl_data]
+                        mb_loss.append(global_model.train(*batch_data))
 
-                # record training result
+                # Record training result
                 if RecordingParameters.WANDB:
-                    write_to_wandb(curr_steps, performance_dict, mb_loss, evaluate=False)
+                    write_to_wandb(curr_steps, metrics, mb_loss, evaluate=False)
                 if RecordingParameters.TENSORBOARD:
-                    write_to_tensorboard(global_summary, curr_steps, performance_dict, mb_loss, evaluate=False)
+                    write_to_tensorboard(global_summary, curr_steps, metrics, mb_loss, evaluate=False)
 
+            # Evaluate model
             if (curr_steps - last_test_t) / RecordingParameters.EVAL_INTERVAL >= 1.0:
                 # if save gif
                 if (curr_steps - last_gif_t) / RecordingParameters.GIF_INTERVAL >= 1.0:
@@ -266,7 +244,7 @@ def main():
                                           "reward": best_perf}
                         torch.save(net_checkpoint, path_checkpoint)
 
-            # save model
+            # Save model
             if (curr_steps - last_model_t) / RecordingParameters.SAVE_INTERVAL >= 1.0:
                 last_model_t = curr_steps
                 print('Saving Model !\n')
@@ -294,7 +272,8 @@ def main():
                           "episode": curr_episodes,
                           "reward": eval_performance_dict['per_r']}
         torch.save(net_checkpoint, path_checkpoint)
-        global_summary.close()
+        if RecordingParameters.TENSORBOARD:
+            global_summary.close()
         # killing
         for e in envs:
             ray.kill(e)

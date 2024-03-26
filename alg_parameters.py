@@ -4,7 +4,7 @@ import datetime
 
 
 class EnvParameters:
-    N_AGENTS = 8 # number of agents used in training
+    N_AGENTS = 8  # number of agents used in training
     N_ACTIONS = 5
     EPISODE_LEN = 256  # maximum episode length in training
     FOV_SIZE = 3
@@ -34,7 +34,7 @@ class TrainingParameters:
     N_MAX_STEPS = 1e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
     MINIBATCH_SIZE = int(2 ** 10)
-    DEMONSTRATION_PROB = 0.1  # imitation learning rate
+    IMITATION_LEARNING_RATE = 0.1  # imitation learning rate
 
 
 class NetParameters:
@@ -74,7 +74,7 @@ class SetupParameters:
 class RecordingParameters:
     RETRAIN = False
     WANDB =  True
-    TENSORBOARD = True
+    TENSORBOARD = False
     TXT_WRITER = True
     ENTITY = 'ruibo'
     TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
@@ -113,7 +113,7 @@ all_args = {'N_AGENTS': EnvParameters.N_AGENTS, 'N_ACTIONS': EnvParameters.N_ACT
             'N_EPOCHS': TrainingParameters.N_EPOCHS, 'N_ENVS': TrainingParameters.N_ENVS,
             'N_MAX_STEPS': TrainingParameters.N_MAX_STEPS,
             'N_STEPS': TrainingParameters.N_STEPS, 'MINIBATCH_SIZE': TrainingParameters.MINIBATCH_SIZE,
-            'DEMONSTRATION_PROB': TrainingParameters.DEMONSTRATION_PROB,
+            'IMITATION_LEARNING_RATE': TrainingParameters.IMITATION_LEARNING_RATE,
             'NET_SIZE': NetParameters.NET_SIZE, 'NUM_CHANNEL': NetParameters.NUM_CHANNEL,
             'GOAL_REPR_SIZE': NetParameters.GOAL_REPR_SIZE, 'VECTOR_LEN': NetParameters.VECTOR_LEN,
             'N_POSITION': NetParameters.N_POSITION,
