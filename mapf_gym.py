@@ -688,7 +688,7 @@ class MAPFEnv(gym.Env):
                  num_agents=EnvParameters.N_AGENTS,
                  size=EnvParameters.WORLD_SIZE,
                  prob=EnvParameters.OBSTACLE_PROB,
-                 stage='train'):
+                 mode='train'):
         """initialization"""
         self.num_agents = num_agents
         self.observation_size = EnvParameters.FOV_SIZE
@@ -696,8 +696,8 @@ class MAPFEnv(gym.Env):
         self.PROB = prob  # obstacle density
         self.max_on_goal = 0
 
-        assert stage in ['train', 'eval'], '`stage` must be either "train" or "eval"!'
-        self.stage = stage
+        assert mode in ['train', 'eval'], '`mode` must be either "train" or "eval"!'
+        self.mode = mode
 
         self.set_world()
         self.viewer = None
@@ -782,20 +782,24 @@ class MAPFEnv(gym.Env):
             return visited
 
         # World size and obstacle density
-        if self.stage == 'train':  # Randomize for better generalization
+        if self.mode == 'train':  # Randomize for better generalization
+
             # Triangular distribution for obstacle density
             prob_mode = self.PROB[0] * 0.33 + self.PROB[1] * 0.66
             prob = np.random.triangular(self.PROB[0], prob_mode, self.PROB[1])
+
             # 3 Options for world size
             size_probs = [0.5, 0.25, 0.25]
             size = np.random.choice([self.SIZE[0], np.mean(self.SIZE), self.SIZE[1]], p=size_probs)
-        elif self.stage == 'eval':  # Fix for evaluation
-            prob = self.PROB
-            size = self.SIZE
 
-        world = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
+        elif self.mode == 'eval':  # Fix for evaluation
+            prob = self.PROB[-1] if isinstance(self.PROB, tuple) else self.PROB
+            size = self.SIZE[-1] if isinstance(self.SIZE, tuple) else self.SIZE
 
-        # randomize the position of agents
+        # Create the world (0: empty, -1: obstacle, >0: agent id)
+        world = -(np.random.rand(int(size), int(size)) < prob).astype(int)
+
+        # Randomize the position of agents
         agent_counter = 1
         agent_locations = []
         while agent_counter <= self.num_agents:

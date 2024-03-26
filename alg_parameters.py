@@ -8,8 +8,8 @@ class EnvParameters:
     N_ACTIONS = 5
     EPISODE_LEN = 256  # maximum episode length in training
     FOV_SIZE = 3
-    WORLD_SIZE = (10, 40)
-    OBSTACLE_PROB = (0.0, 0.5)
+    WORLD_SIZE = (10, 40)  # must be tuple
+    OBSTACLE_PROB = (0.0, 0.5)  # must be tuple
     ACTION_COST = -0.3
     IDLE_COST = -0.3
     GOAL_REWARD = 0.0

@@ -26,8 +26,8 @@ class Runner(object):
                                  'wrong_blocking': 0, 'num_collide': 0, 'reward_count': 0, 'ex_reward': 0,
                                  'in_reward': 0}
 
-        self.env = MAPFEnv(num_agents=self.num_agent)
-        self.imitation_env = MAPFEnv(num_agents=self.imitation_num_agent)
+        self.env = MAPFEnv(num_agents=self.num_agent, mode='train')
+        self.imitation_env = MAPFEnv(num_agents=self.imitation_num_agent, mode='train')
 
         self.local_device = get_torch_device(SetupParameters.USE_GPU_LOCAL)
         self.local_model = Model(env_id, self.local_device)

@@ -74,7 +74,7 @@ def main():
         global_model.net_optimizer.load_state_dict(net_dict['optimizer'])
 
     envs = [Runner.remote(i + 1) for i in range(TrainingParameters.N_ENVS)]
-    eval_env = MAPFEnv(num_agents=EnvParameters.N_AGENTS)
+    eval_env = MAPFEnv(num_agents=EnvParameters.N_AGENTS, mode='eval')
     eval_memory = EpisodicBuffer(0, EnvParameters.N_AGENTS)
 
     if RecordingParameters.RETRAIN:
