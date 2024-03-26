@@ -231,23 +231,23 @@ def main():
                             and n_steps_perf['per_r'] > best_perf):
                         best_perf = n_steps_perf['per_r']
                         last_best_step = curr_steps
-                        print('Saving best model!')
+                        print('Saving best model ...')
                         best_model_dir = osp.join(RecordingParameters.MODEL_PATH, 'best_model')
                         save_net(best_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)
 
             # Save model
             if interval_has_elapsed(curr_steps, last_model_save_step, RecordingParameters.SAVE_INTERVAL):
                 last_model_save_step = curr_steps
-                print('Saving Model!')
+                print('Saving model ...')
                 model_path = osp.join(RecordingParameters.MODEL_PATH, '%.5i' % curr_steps)
                 save_net(model_path, global_model, curr_steps, curr_episodes, n_steps_perf)
 
     except KeyboardInterrupt:
-        print("CTRL-C pressed. killing remote workers!")
+        print("CTRL-C pressed. Killing remote workers!")
 
     finally:
         # Save final model
-        print('Saving Final Model!')
+        print('Saving final model ...')
         final_model_dir = RecordingParameters.MODEL_PATH + '/final'
         ensure_directory(final_model_dir)
         save_net(final_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)

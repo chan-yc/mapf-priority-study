@@ -71,14 +71,13 @@ def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
             if one_episode_perf['episode_len'] < EnvParameters.EPISODE_LEN - 1:
                 one_episode_perf['success_rate'] = 1
             one_episode_perf['max_goals'] = max_on_goals
-            one_episode_perf['collide'] = one_episode_perf['collide'] / (
-                    (one_episode_perf['episode_len'] + 1) * num_agent)
+            one_episode_perf['collide'] = one_episode_perf['collide'] / ((one_episode_perf['episode_len'] + 1) * num_agent)
             if save_gif0:
                 if not os.path.exists(RecordingParameters.GIFS_PATH):
                     os.makedirs(RecordingParameters.GIFS_PATH)
                 episode_frames.append(eval_env._render())
                 images = np.array(episode_frames)
-                make_gif(images, f'{ RecordingParameters.GIFS_PATH}/evaluation.gif')
+                make_gif(images, f'{RecordingParameters.GIFS_PATH}/evaluation.gif')
 
     return one_episode_perf
 
@@ -142,13 +141,13 @@ if __name__ == "__main__":
             metrics_mean[i] = np.nanmean(all_metrics[i])
 
         # Log results
-        mean_log = f"EL: {round(metrics_mean['episode_len'], 2)}, "
-                   f"MR: {round(metrics_mean['max_goals'], 2)}, "
-                   f"CO: {round(metrics_mean['collide'] * 100, 2)}, "
+        mean_log = f"EL: {round(metrics_mean['episode_len'], 2)}, " \
+                   f"MR: {round(metrics_mean['max_goals'], 2)}, " \
+                   f"CO: {round(metrics_mean['collide'] * 100, 2)}, " \
                    f"SR: {metrics_mean['success_rate'] * 100}"
 
-        std_log = f"EL_STD: {round(metrics_stdv['episode_len'], 2)}, "
-                  f"MR_STD: {round(metrics_stdv['max_goals'], 2)}, "
+        std_log = f"EL_STD: {round(metrics_stdv['episode_len'], 2)}, " \
+                  f"MR_STD: {round(metrics_stdv['max_goals'], 2)}, " \
                   f"CO_STD: {round(metrics_stdv['collide'] * 100, 2)}"
 
         print(f'Agent: {case_params[0]}, World: {case_params[1]}, Obstacle: {case_params[2]}')

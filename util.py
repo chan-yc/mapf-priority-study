@@ -145,7 +145,7 @@ def write_to_wandb(step, performance_dict=None, mb_loss=None, imitation_loss=Non
 def make_gif(images, file_name):
     """record gif"""
     imageio.mimwrite(file_name, images, subrectangles=True)
-    print("wrote gif")
+    print(f'Saved GIF to {file_name}')
 
 
 def reset_env(env, num_agent):
@@ -242,3 +242,4 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
                       "episode": curr_episodes,
                       "reward": performance['per_r']}
     torch.save(net_checkpoint, net_path)
+    print(f"Saved model to {net_path}")
