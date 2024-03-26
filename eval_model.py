@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
         # TODO: avoid manual modification of 'mapf_gym.py'
         # remember to modify the corresponding code (size, prob) in the 'mapf_gym.py'
-        env = MAPFEnv(num_agent, world_size, obstacle_prob)
+        env = MAPFEnv(num_agent, world_size, obstacle_prob, 'eval')
         episodic_buffer = EpisodicBuffer(total_step=2e6, num_agent=num_agent)
 
         all_metrics = {'episode_len': [], 'max_goals': [],

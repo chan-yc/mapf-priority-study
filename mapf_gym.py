@@ -684,8 +684,11 @@ class MAPFEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi"]}
 
-    def __init__(self, num_agents=EnvParameters.N_AGENTS, size=EnvParameters.WORLD_SIZE,
-                 prob=EnvParameters.OBSTACLE_PROB):
+    def __init__(self,
+                 num_agents=EnvParameters.N_AGENTS,
+                 size=EnvParameters.WORLD_SIZE,
+                 prob=EnvParameters.OBSTACLE_PROB,
+                 stage='train'):
         """initialization"""
         self.num_agents = num_agents
         self.observation_size = EnvParameters.FOV_SIZE
@@ -693,9 +696,13 @@ class MAPFEnv(gym.Env):
         self.PROB = prob  # obstacle density
         self.max_on_goal = 0
 
+        assert stage in ['train', 'eval'], '`stage` must be either "train" or "eval"!'
+        self.stage = stage
+
         self.set_world()
-        self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(EnvParameters.N_ACTIONS)])
         self.viewer = None
+        self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents),
+                                          spaces.Discrete(EnvParameters.N_ACTIONS)])
 
     def is_connected(self, world0):
         """check if each agent's start position and goal position are sampled from the same connected region"""
@@ -774,14 +781,17 @@ class MAPFEnv(gym.Env):
             regions_dict[(x0, y0)] = visited
             return visited
 
-        prob = np.random.triangular(self.PROB[0], .33 * self.PROB[0] + .66 * self.PROB[1],
-                                    self.PROB[1])  # sample a value from triangular distribution
-
-        size = np.random.choice([self.SIZE[0], self.SIZE[0] * .5 + self.SIZE[1] * .5, self.SIZE[1]],
-                                p=[.5, .25, .25])  # sample a value according to the given probability
-
-        # prob = self.PROB
-        # size = self.SIZE  # fixed world0 size and obstacle density for evaluation
+        # World size and obstacle density
+        if self.stage == 'train':  # Randomize for better generalization
+            # Triangular distribution for obstacle density
+            prob_mode = self.PROB[0] * 0.33 + self.PROB[1] * 0.66
+            prob = np.random.triangular(self.PROB[0], prob_mode, self.PROB[1])
+            # 3 Options for world size
+            size_probs = [0.5, 0.25, 0.25]
+            size = np.random.choice([self.SIZE[0], np.mean(self.SIZE), self.SIZE[1]], p=size_probs)
+        elif self.stage == 'eval':  # Fix for evaluation
+            prob = self.PROB
+            size = self.SIZE
 
         world = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
 
