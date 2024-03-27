@@ -22,7 +22,7 @@ from util import (set_global_seeds, write_to_tensorboard, write_to_wandb,
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 ray.init(num_gpus=SetupParameters.NUM_GPU)
-print("Welcome to SCRIMP on MAPF!\n")
+print("Start training MAPF using SCRIMP.\n")
 
 
 def main():
@@ -46,8 +46,7 @@ def main():
                    config=all_configs,
                    id=wandb_id,
                    resume='allow')
-        print('id is:{}'.format(wandb_id))
-        print('Launching wandb...\n')
+        print(f'Launched wandb. (ID: {wandb_id})\n')
 
     if RecordingParameters.TENSORBOARD:
         if RecordingParameters.RETRAIN:
@@ -56,13 +55,13 @@ def main():
             summary_path = RecordingParameters.SUMMARY_PATH
         ensure_directory(summary_path)
         global_summary = SummaryWriter(summary_path)
-        print('Launching tensorboard...\n')
+        print('Launched tensorboard.\n')
 
         if RecordingParameters.JSON_WRITER:
             txt_path = summary_path + '/' + RecordingParameters.JSON_NAME
             with open(txt_path, "w") as f:
                 json.dump(all_configs, f, indent=4)
-            print('Logging config to json...\n')
+            print('Logged config to json.\n')
 
     set_global_seeds(SetupParameters.SEED)
     setproctitle.setproctitle(RecordingParameters.EXPERIMENT_PROJECT
@@ -86,8 +85,15 @@ def main():
         curr_steps = net_dict['training_state']["step"]
         curr_episodes = net_dict['training_state']["episode"]
         best_perf = net_dict['training_state']["reward"]
+        print(f"Restored model from '{path_checkpoint}'\n")
     else:
         curr_steps, curr_episodes, best_perf = 0, 0, 0
+        print(f'Starting new training.\n')
+
+    state_log = f"Episodes: {curr_episodes: <8}  " \
+                f"Steps: {curr_steps: <8}  " \
+                f"Episode reward: {round(best_perf, 2): <8}\n"
+    print(state_log)
 
     last_eval_step = -RecordingParameters.EVAL_INTERVAL - 1
     last_best_step = -RecordingParameters.BEST_INTERVAL - 1
@@ -223,8 +229,8 @@ def main():
                 # Log evaluation result
                 eval_log = f"Episodes: {curr_episodes: <8}  " \
                            f"Steps: {curr_steps: <8}  " \
-                           f"Episode reward: {round(n_steps_perf['per_r'], .2): <8}  " \
-                           f"Final goals: {n_steps_perf['per_final_goals']: <8}"
+                           f"Episode reward: {round(n_steps_perf['per_r'], 2): <8}  " \
+                           f"Final goals: {n_steps_perf['per_final_goals']: <8}\n"
                 print(eval_log)
 
                 # Save model with the best performance
@@ -233,7 +239,7 @@ def main():
                             and n_steps_perf['per_r'] > best_perf):
                         best_perf = n_steps_perf['per_r']
                         last_best_step = curr_steps
-                        print('Saving best model ...')
+                        print('Saving best model ')
                         best_model_dir = osp.join(RecordingParameters.MODEL_PATH, 'best_model')
                         save_net(best_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)
 
@@ -245,7 +251,7 @@ def main():
                 save_net(model_path, global_model, curr_steps, curr_episodes, n_steps_perf)
 
     except KeyboardInterrupt:
-        print("CTRL-C pressed. Killing remote workers!")
+        print("[ERROR] KeyboardInterrupt! Killing remote workers! \n")
 
     finally:
         # Save final model

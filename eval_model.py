@@ -108,12 +108,13 @@ def main():
                config=net_dict['all_configs'],
                id=wandb_id,
                resume='allow')
-    print(f'Launched wandb (ID: {wandb_id})')
+    print(f'Launched wandb. (ID: {wandb_id})\n')
 
     # Start evaluation for each experiment case
-    print('Start evaluation.')
+    print('Start evaluation.\n')
     print('-' * 70)
-    for case_params in CASE:
+    for n, case_params in enumerate(CASE):
+        print(f'[Case: {n+1}/{len(CASE)}]')
 
         save_gif = True  # Save one GIF for each case
 
@@ -142,7 +143,8 @@ def main():
             # Record GIF only for the first episode
             save_gif = False
             if (j+1) % 20 == 0:
-                print(f'Finished {j+1} episodes.')
+                print(f'Finished {j+1}/{NUM_TIMES} episodes.')
+        print(f'Finished all {NUM_TIMES} episodes.')
 
         # Compute log messages of mean metrics
         perf_log = {}
