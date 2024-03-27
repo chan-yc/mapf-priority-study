@@ -211,9 +211,10 @@ class Runner(object):
                     mstar_path = od_mstar.find_path(world, start_positions, goals, inflation=2, time_limit=5)
                     obs, vector, actions, hidden_state, message = self.parse_path(mstar_path)
                 except OutOfTimeError:
-                    print("timeout")
+                    print('[ERROR] ODrM* timeout during imitation learning!\n')
                 except NoSolutionError:
-                    print("nosol????", start_positions)
+                    print('[ERROR] ODrM* no solution during imitation learning!')
+                    print(start_positions)
 
                 if obs is not None:  # no error
                     mb_obs.append(obs)
@@ -276,7 +277,7 @@ class Runner(object):
             vector[:, :, 5] = min_dist
 
             if not all(valid_actions):  # M* can not generate collisions
-                print('invalid action')
+                print('[ERROR] ODrM* generated invalid actions during imitation learning!\n')
                 return None, None, None, None
 
         mb_obs = np.concatenate(mb_obs, axis=0)

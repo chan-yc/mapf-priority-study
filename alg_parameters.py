@@ -50,6 +50,7 @@ class NetParameters:
     D_K = 32
     D_V = 32
 
+
 # TODO Examinate the distance factor! Add more factors if needed
 class TieBreakingParameters:
     DIST_FACTOR = 0.1
@@ -98,7 +99,7 @@ class RecordingParameters:
 
 param_classes = [EnvParameters, TrainingParameters, NetParameters,
                  TieBreakingParameters, RecordingParameters]
-all_args = {}
+all_configs = {}
 for params in param_classes:
-    all_args[params.__name__] = {k: v for k, v in params.__dict__.items()
-                                 if not k.startswith('_')}
+    all_configs[params.__name__] = {k: v for k, v in params.__dict__.items()
+                                    if not k.startswith('_')}

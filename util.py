@@ -145,7 +145,7 @@ def write_to_wandb(step, performance_dict=None, mb_loss=None, imitation_loss=Non
 def make_gif(images, file_name):
     """record gif"""
     imageio.mimwrite(file_name, images, subrectangles=True)
-    print(f'Saved GIF to {file_name}')
+    print(f'Saved GIF to {file_name}\n')
 
 
 def reset_env(env, num_agent):
@@ -235,11 +235,18 @@ def ensure_directory(dir_path):
 
 def save_net(net_dir, model, curr_steps, curr_episodes, performance):
     ensure_directory(net_dir)
+    state_log = f"Episodes: {curr_episodes: <8}  " \
+                f"Steps: {curr_steps: <8}  " \
+                f"Episode reward: {round(performance['per_r'], 2): <8}"
+    print(state_log)
     net_path = net_dir + "/net_checkpoint.pkl"
     net_checkpoint = {"model": model.network.state_dict(),
                       "optimizer": model.net_optimizer.state_dict(),
-                      "step": curr_steps,
-                      "episode": curr_episodes,
-                      "reward": performance['per_r']}
+                      "all_configs": all_configs,
+                      "training_state": {"step": curr_steps,
+                                         "episode": curr_episodes,
+                                         "reward": performance['per_r'],
+                                         }
+                      }
     torch.save(net_checkpoint, net_path)
-    print(f"Saved model to {net_path}")
+    print(f"Saved model to {net_path}\n")

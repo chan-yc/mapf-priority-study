@@ -94,7 +94,7 @@ class Model(object):
         _, _, _, _, _, output_state, _, message = self.network(obs, vector, input_state, message)
         return output_state, message
 
-    def final_evaluate(self, observation, vector, input_state, message, num_agent, greedy):
+    def final_evaluate(self, observation, vector, input_state, message, num_agent, greedy=False):
         """using neural network in independent evaluations for prediction"""
         eval_action = np.zeros(num_agent)
         observation = torch.from_numpy(np.asarray(observation)).to(self.device)
@@ -248,3 +248,12 @@ class Model(object):
         self.net_scaler.update()
 
         return [imitation_loss.cpu().detach().numpy(), grad_norm.cpu().detach().numpy()]  # for recording
+
+    @staticmethod
+    def init_message(num_agent, device):
+        return torch.zeros((1, num_agent, NetParameters.NET_SIZE)).to(device)
+
+    @staticmethod
+    def init_hidden_state(num_agent, device):
+        return (torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device),
+                torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device))
