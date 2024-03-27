@@ -10,7 +10,7 @@ import torch
 import wandb
 
 from alg_parameters import (SetupParameters, EnvParameters, TrainingParameters,
-                            NetParameters, RecordingParameters, all_args)
+                            NetParameters, RecordingParameters, all_configs)
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
@@ -31,8 +31,8 @@ def main():
     # Prepare for training
     if RecordingParameters.RETRAIN:
         restore_path = './local_model'
-        net_path_checkpoint = restore_path + "/net_checkpoint.pkl"
-        net_dict = torch.load(net_path_checkpoint)
+        path_checkpoint = restore_path + "/net_checkpoint.pkl"
+        net_dict = torch.load(path_checkpoint)
 
     if RecordingParameters.WANDB:
         if RecordingParameters.RETRAIN:
@@ -41,9 +41,9 @@ def main():
             wandb_id = wandb.util.generate_id()
         wandb.init(project=RecordingParameters.EXPERIMENT_PROJECT,
                    name=RecordingParameters.EXPERIMENT_NAME,
-                   entity=RecordingParameters.ENTITY,
+                   # entity=RecordingParameters.ENTITY,
                    notes=RecordingParameters.EXPERIMENT_NOTE,
-                   config=all_args,
+                   config=all_configs,
                    id=wandb_id,
                    resume='allow')
         print('id is:{}'.format(wandb_id))
@@ -61,7 +61,7 @@ def main():
         if RecordingParameters.JSON_WRITER:
             txt_path = summary_path + '/' + RecordingParameters.JSON_NAME
             with open(txt_path, "w") as f:
-                json.dump(all_args, f, indent=4)
+                json.dump(all_configs, f, indent=4)
             print('Logging config to json...\n')
 
     set_global_seeds(SetupParameters.SEED)
@@ -83,9 +83,9 @@ def main():
     eval_memory = EpisodicBuffer(0, EnvParameters.N_AGENTS)
 
     if RecordingParameters.RETRAIN:
-        curr_steps = net_dict["step"]
-        curr_episodes = net_dict["episode"]
-        best_perf = net_dict["reward"]
+        curr_steps = net_dict['training_state']["step"]
+        curr_episodes = net_dict['training_state']["episode"]
+        best_perf = net_dict['training_state']["reward"]
     else:
         curr_steps, curr_episodes, best_perf = 0, 0, 0
 
@@ -221,9 +221,10 @@ def main():
                                          evaluate=True, greedy=False)
 
                 # Log evaluation result
-                eval_log = f"Episodes: {curr_episodes}, Steps: {curr_steps}, " \
-                           f"Episode reward: {n_steps_perf['per_r']}, " \
-                           f"Final goals: {n_steps_perf['per_final_goals']}"
+                eval_log = f"Episodes: {curr_episodes: <8}  " \
+                           f"Steps: {curr_steps: <8}  " \
+                           f"Episode reward: {round(n_steps_perf['per_r'], .2): <8}  " \
+                           f"Final goals: {n_steps_perf['per_final_goals']: <8}"
                 print(eval_log)
 
                 # Save model with the best performance
@@ -272,21 +273,20 @@ def evaluate(eval_env, episodic_buffer, model, device, save_gif, curr_steps, gre
 
     for i in range(RecordingParameters.EVAL_EPISODES):
 
-        # Reset environment and buffer
-        message = torch.zeros((1, num_agent, NetParameters.NET_SIZE)).to(device)
-        hidden_state = (torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device),
-                        torch.zeros((num_agent, NetParameters.NET_SIZE // 2)).to(device))
-
+        # Reset environment and
         done, valid_actions, obs, vector, _ = reset_env(eval_env, num_agent)
+        message = Model.init_message(num_agent, device)
+        hidden_state = Model.init_hidden_state(num_agent, device)
+
+        # Reset buffer
         episodic_buffer.reset(curr_steps, num_agent)
         new_xy = eval_env.get_positions()
         episodic_buffer.batch_add(new_xy)
 
         episode_perf = Runner.init_episode_perf()
 
-        # Stepping
+        # Run episode
         while not done:
-
             if save_gif:
                 episode_frames.append(eval_env._render())
 
@@ -300,10 +300,11 @@ def evaluate(eval_env, episodic_buffer, model, device, save_gif, curr_steps, gre
             # Move
             rewards, valid_actions, obs, vector, _, done, _, num_on_goals, \
                 episode_perf, max_on_goals, _, _, on_goal \
-                    = one_step(eval_env, episode_perf, actions, pre_block, model,
-                               v_all, hidden_state, ps, episodic_buffer.no_reward,
-                               message, episodic_buffer, num_agent)
+                = one_step(eval_env, episode_perf, actions, pre_block, model,
+                           v_all, hidden_state, ps, episodic_buffer.no_reward,
+                           message, episodic_buffer, num_agent)
 
+            # Compute intrinsic rewards
             new_xy = eval_env.get_positions()
             processed_rewards, be_rewarded, intrinsic_reward, min_dist \
                 = episodic_buffer.if_reward(new_xy, rewards, done, on_goal)
@@ -319,22 +320,21 @@ def evaluate(eval_env, episodic_buffer, model, device, save_gif, curr_steps, gre
             if episode_perf['num_step'] == EnvParameters.EPISODE_LEN // 2:
                 n_steps_perf['per_half_goals'].append(num_on_goals)
 
-            if done:
-                # Update n steps performance
-                n_steps_perf = update_perf(episode_perf, n_steps_perf, num_on_goals,
-                                           max_on_goals, num_agent)
-                # Save GIF
-                if save_gif:
-                    ensure_directory(RecordingParameters.GIFS_PATH)
-                    episode_frames.append(eval_env._render())
-                    images = np.array(episode_frames)
-                    image_path = f"{RecordingParameters.GIFS_PATH}/" \
-                                 f"steps_{curr_steps:d}_" \
-                                 f"reward{episode_perf['episode_reward']:.1f}_" \
-                                 f"final_goals{num_on_goals:.1f}_" \
-                                 f"greedy{greedy:d}.gif"
-                    make_gif(images, image_path)
-                    save_gif = False
+        # Update n steps performance
+        n_steps_perf = update_perf(episode_perf, n_steps_perf, num_on_goals,
+                                   max_on_goals, num_agent)
+        # Save GIF
+        if save_gif:
+            ensure_directory(RecordingParameters.GIFS_PATH)
+            episode_frames.append(eval_env._render())
+            images = np.array(episode_frames)
+            image_path = f"{RecordingParameters.GIFS_PATH}/" \
+                            f"steps_{curr_steps:d}_" \
+                            f"reward{episode_perf['episode_reward']:.1f}_" \
+                            f"final_goals{num_on_goals:.1f}_" \
+                            f"greedy{greedy:d}.gif"
+            make_gif(images, image_path)
+            save_gif = False
 
     # Average performance of multiple episodes
     n_steps_perf = {k: np.nanmean(v) for k, v in n_steps_perf.items()}

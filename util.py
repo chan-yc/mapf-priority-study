@@ -238,8 +238,11 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
     net_path = net_dir + "/net_checkpoint.pkl"
     net_checkpoint = {"model": model.network.state_dict(),
                       "optimizer": model.net_optimizer.state_dict(),
-                      "step": curr_steps,
-                      "episode": curr_episodes,
-                      "reward": performance['per_r']}
+                      "all_configs": all_configs,
+                      "training_state": {"step": curr_steps,
+                                         "episode": curr_episodes,
+                                         "reward": performance['per_r'],
+                                         }
+                      }
     torch.save(net_checkpoint, net_path)
     print(f"Saved model to {net_path}")
