@@ -22,12 +22,10 @@ class Runner(object):
         set_global_seeds(env_id*123)
         self.num_agent = EnvParameters.N_AGENTS
         self.imitation_num_agent = EnvParameters.N_AGENTS
-        self.one_episode_perf = {'num_step': 0, 'episode_reward': 0, 'invalid': 0, 'block': 0, 'num_leave_goal': 0,
-                                 'wrong_blocking': 0, 'num_collide': 0, 'reward_count': 0, 'ex_reward': 0,
-                                 'in_reward': 0}
+        self.episode_perf = self.init_episode_perf()
 
-        self.env = MAPFEnv(num_agents=self.num_agent)
-        self.imitation_env = MAPFEnv(num_agents=self.imitation_num_agent)
+        self.env = MAPFEnv(num_agents=self.num_agent, mode='train')
+        self.imitation_env = MAPFEnv(num_agents=self.imitation_num_agent, mode='train')
 
         self.local_device = get_torch_device(SetupParameters.USE_GPU_LOCAL)
         self.local_model = Model(env_id, self.local_device)
@@ -52,10 +50,7 @@ class Runner(object):
             mb_hidden_state = []
             mb_message = []
             mb_train_valid, mb_blocking = [], []
-            performance_dict = {'per_r': [], 'per_in_r': [], 'per_ex_r': [], 'per_valid_rate': [],
-                                'per_episode_len': [], 'per_block': [],
-                                'per_leave_goal': [], 'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
-                                'per_max_goals': [], 'per_num_collide': [], 'rewarded_rate': []}
+            n_steps_perf = self.init_n_steps_perf()
 
             self.local_model.set_weights(weights)
             for _ in range(TrainingParameters.N_STEPS):
@@ -67,7 +62,7 @@ class Runner(object):
                 actions, ps, values_in, values_ex, values_all, pre_block, self.hidden_state, num_invalid, self.message = \
                     self.local_model.step(self.obs, self.vector, self.valid_actions, self.hidden_state,
                                           self.episodic_buffer.no_reward, self.message, self.num_agent)
-                self.one_episode_perf['invalid'] += num_invalid
+                self.episode_perf['invalid'] += num_invalid
                 mb_values_in.append(values_in)
                 mb_values_ex.append(values_ex)
                 mb_values_all.append(values_all)
@@ -76,8 +71,8 @@ class Runner(object):
                 mb_done.append(self.done)
 
                 rewards, self.valid_actions, self.obs, self.vector, self.train_valid, self.done, blockings, \
-                    num_on_goals, self.one_episode_perf, max_on_goals, action_status, modify_actions, on_goal \
-                    = one_step(self.env, self.one_episode_perf, actions, pre_block, self.local_model, values_all,
+                    num_on_goals, self.episode_perf, max_on_goals, action_status, modify_actions, on_goal \
+                    = one_step(self.env, self.episode_perf, actions, pre_block, self.local_model, values_all,
                                self.hidden_state, ps, self.episodic_buffer.no_reward, self.message, self.episodic_buffer,
                                self.num_agent)
 
@@ -86,7 +81,7 @@ class Runner(object):
                                                                                                              rewards,
                                                                                                              self.done,
                                                                                                              on_goal)
-                self.one_episode_perf['reward_count'] += be_rewarded
+                self.episode_perf['reward_count'] += be_rewarded
                 self.vector[:, :, 3] = rewards
                 self.vector[:, :, 4] = intrinsic_rewards
                 self.vector[:, :, 5] = min_dist
@@ -101,23 +96,20 @@ class Runner(object):
                 mb_rewards_ex.append(rewards)
                 mb_blocking.append(blockings)
 
-                self.one_episode_perf['episode_reward'] += np.sum(processed_rewards)
-                self.one_episode_perf['ex_reward'] += np.sum(rewards)
-                self.one_episode_perf['in_reward'] += np.sum(intrinsic_rewards)
-                if self.one_episode_perf['num_step'] == EnvParameters.EPISODE_LEN // 2:
-                    performance_dict['per_half_goals'].append(num_on_goals)
+                self.episode_perf['episode_reward'] += np.sum(processed_rewards)
+                self.episode_perf['ex_reward'] += np.sum(rewards)
+                self.episode_perf['in_reward'] += np.sum(intrinsic_rewards)
+                if self.episode_perf['num_step'] == EnvParameters.EPISODE_LEN // 2:
+                    n_steps_perf['per_half_goals'].append(num_on_goals)
 
                 if self.done:
-                    performance_dict = update_perf(self.one_episode_perf, performance_dict, num_on_goals, max_on_goals,
-                                                   self.num_agent)
-                    self.one_episode_perf = {'num_step': 0, 'episode_reward': 0, 'invalid': 0, 'block': 0,
-                                             'num_leave_goal': 0, 'wrong_blocking': 0, 'num_collide': 0,
-                                             'reward_count': 0, 'ex_reward': 0, 'in_reward': 0}
+                    n_steps_perf = update_perf(self.episode_perf, n_steps_perf, num_on_goals,
+                                               max_on_goals, self.num_agent)
+                    self.episode_perf = self.init_episode_perf()
                     self.num_agent = EnvParameters.N_AGENTS
 
-                    self.done, self.valid_actions, self.obs, self.vector, self.train_valid = reset_env(self.env,
-                                                                                                       self.num_agent)
-                    self.done = True
+                    _, self.valid_actions, self.obs, self.vector, self.train_valid \
+                        = reset_env(self.env, self.num_agent)
 
                     self.hidden_state = (
                         torch.zeros((self.num_agent, NetParameters.NET_SIZE // 2)).to(self.local_device),
@@ -191,7 +183,7 @@ class Runner(object):
 
         return mb_obs, mb_vector, mb_returns_in, mb_returns_ex, mb_returns_all, mb_values_in, mb_values_ex, \
             mb_values_all, mb_actions, mb_ps, mb_hidden_state, mb_train_valid, mb_blocking, mb_message, \
-            len(performance_dict['per_r']), performance_dict
+            len(n_steps_perf['per_r']), n_steps_perf
 
     def imitation(self, weights, total_steps):
         """run multiple steps and collect corresponding data for imitation learning"""
@@ -293,3 +285,16 @@ class Runner(object):
         mb_actions = np.asarray(mb_actions, dtype=np.int64)
         mb_hidden_state = np.stack(mb_hidden_state)
         return mb_obs, mb_vector, mb_actions, mb_hidden_state, mb_message
+
+    @staticmethod
+    def init_n_steps_perf():
+        return {'per_r': [], 'per_in_r': [], 'per_ex_r': [], 'per_valid_rate': [],
+                'per_episode_len': [], 'per_block': [], 'per_leave_goal': [],
+                'per_final_goals': [], 'per_half_goals': [], 'per_block_acc': [],
+                'per_max_goals': [], 'per_num_collide': [], 'rewarded_rate': []}
+
+    @staticmethod
+    def init_episode_perf():
+        return {'num_step': 0, 'episode_reward': 0, 'invalid': 0, 'block': 0,
+                'num_leave_goal': 0, 'wrong_blocking': 0, 'num_collide': 0,
+                'reward_count': 0, 'ex_reward': 0, 'in_reward': 0}

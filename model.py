@@ -188,10 +188,12 @@ class Model(object):
                                          + (1 - target_blockings) * torch.log(torch.clamp(1 - block, 1e-6, 1.0 - 1e-6)))
 
             # total loss
-            all_loss = -policy_loss - entropy * TrainingParameters.ENTROPY_COEF + \
-                TrainingParameters.IN_VALUE_COEF * critic_loss_in + \
-                TrainingParameters.EX_VALUE_COEF * critic_loss_ex + TrainingParameters.VALID_COEF * valid_loss \
-                + TrainingParameters.BLOCK_COEF * blocking_loss
+            all_loss = - policy_loss \
+                       - entropy * TrainingParameters.ENTROPY_COEF \
+                       + TrainingParameters.IN_VALUE_COEF * critic_loss_in \
+                       + TrainingParameters.EX_VALUE_COEF * critic_loss_ex \
+                       + TrainingParameters.VALID_COEF * valid_loss \
+                       + TrainingParameters.BLOCK_COEF * blocking_loss
 
         clip_frac = torch.mean(torch.greater(torch.abs(ratio - 1.0), TrainingParameters.CLIP_RANGE).float())
 

@@ -684,8 +684,11 @@ class MAPFEnv(gym.Env):
 
     metadata = {"render.modes": ["human", "ansi"]}
 
-    def __init__(self, num_agents=EnvParameters.N_AGENTS, size=EnvParameters.WORLD_SIZE,
-                 prob=EnvParameters.OBSTACLE_PROB):
+    def __init__(self,
+                 num_agents=EnvParameters.N_AGENTS,
+                 size=EnvParameters.WORLD_SIZE,
+                 prob=EnvParameters.OBSTACLE_PROB,
+                 mode='train'):
         """initialization"""
         self.num_agents = num_agents
         self.observation_size = EnvParameters.FOV_SIZE
@@ -693,9 +696,13 @@ class MAPFEnv(gym.Env):
         self.PROB = prob  # obstacle density
         self.max_on_goal = 0
 
+        assert mode in ['train', 'eval'], '`mode` must be either "train" or "eval"!'
+        self.mode = mode
+
         self.set_world()
-        self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(EnvParameters.N_ACTIONS)])
         self.viewer = None
+        self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents),
+                                          spaces.Discrete(EnvParameters.N_ACTIONS)])
 
     def is_connected(self, world0):
         """check if each agent's start position and goal position are sampled from the same connected region"""
@@ -774,18 +781,25 @@ class MAPFEnv(gym.Env):
             regions_dict[(x0, y0)] = visited
             return visited
 
-        prob = np.random.triangular(self.PROB[0], .33 * self.PROB[0] + .66 * self.PROB[1],
-                                    self.PROB[1])  # sample a value from triangular distribution
+        # World size and obstacle density
+        if self.mode == 'train':  # Randomize for better generalization
 
-        size = np.random.choice([self.SIZE[0], self.SIZE[0] * .5 + self.SIZE[1] * .5, self.SIZE[1]],
-                                p=[.5, .25, .25])  # sample a value according to the given probability
+            # Triangular distribution for obstacle density
+            prob_mode = self.PROB[0] * 0.33 + self.PROB[1] * 0.66
+            prob = np.random.triangular(self.PROB[0], prob_mode, self.PROB[1])
 
-        # prob = self.PROB
-        # size = self.SIZE  # fixed world0 size and obstacle density for evaluation
+            # 3 Options for world size
+            size_probs = [0.5, 0.25, 0.25]
+            size = np.random.choice([self.SIZE[0], np.mean(self.SIZE), self.SIZE[1]], p=size_probs)
 
-        world = -(np.random.rand(int(size), int(size)) < prob).astype(int)  # -1 obstacle,0 nothing, >0 agent id
+        elif self.mode == 'eval':  # Fix for evaluation
+            prob = self.PROB[-1] if isinstance(self.PROB, tuple) else self.PROB
+            size = self.SIZE[-1] if isinstance(self.SIZE, tuple) else self.SIZE
 
-        # randomize the position of agents
+        # Create the world (0: empty, -1: obstacle, >0: agent id)
+        world = -(np.random.rand(int(size), int(size)) < prob).astype(int)
+
+        # Randomize the position of agents
         agent_counter = 1
         agent_locations = []
         while agent_counter <= self.num_agents:
@@ -1039,7 +1053,7 @@ class MAPFEnv(gym.Env):
         c = {a + 1: hsv_to_rgb(np.array([a / float(self.num_agents), 1, 1])) for a in range(self.num_agents)}
         return c
 
-    def _render(self, mode='human', close=False, screen_width=800, screen_height=800, action_probs=None):
+    def _render(self, mode='rgb_array', close=False, screen_width=900, screen_height=900, action_probs=None):
         if close:
             return
         # values is an optional parameter which provides a visualization for the value of each agent per step
