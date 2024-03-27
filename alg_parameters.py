@@ -75,9 +75,9 @@ class RecordingParameters:
     RETRAIN = False
     WANDB =  True
     TENSORBOARD = False
-    TXT_WRITER = True
-    ENTITY = 'ruibo'
-    TIME = datetime.datetime.now().strftime('%d-%m-%y%H%M')
+    JSON_WRITER = True
+    ENTITY = 'group'
+    TIME = datetime.datetime.now().strftime('%Y%m%d_%H%M')
     EXPERIMENT_PROJECT = 'MAPF'
     EXPERIMENT_NAME = 'SCRIMP_UPDATE'
     EXPERIMENT_NOTE = ''
@@ -87,54 +87,18 @@ class RecordingParameters:
     EVAL_INTERVAL = TrainingParameters.N_ENVS * TrainingParameters.N_STEPS  # interval of evaluating training model0
     EVAL_EPISODES = 1  # number of episode used in evaluation
     RECORD_BEST = False
-    MODEL_PATH = './models' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
-    GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
-    SUMMARY_PATH = './summaries' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + TIME
-    TXT_NAME = 'alg.txt'
+    MODEL_PATH = './models' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
+    GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
+    SUMMARY_PATH = './summaries' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
+    JSON_NAME = 'alg.json'
     LOSS_NAME = ['all_loss', 'policy_loss', 'policy_entropy', 'critic_loss_in',
                  'critic_loss_ex', 'valid_loss', 'blocking_loss', 'clipfrac',
                  'grad_norm', 'advantage']
 
 
-all_args = {'N_AGENTS': EnvParameters.N_AGENTS, 'N_ACTIONS': EnvParameters.N_ACTIONS,
-            'EPISODE_LEN': EnvParameters.EPISODE_LEN, 'FOV_SIZE': EnvParameters.FOV_SIZE,
-            'WORLD_SIZE': EnvParameters.WORLD_SIZE,
-            'OBSTACLE_PROB': EnvParameters.OBSTACLE_PROB,
-            'ACTION_COST': EnvParameters.ACTION_COST,
-            'IDLE_COST': EnvParameters.IDLE_COST, 'GOAL_REWARD': EnvParameters.GOAL_REWARD,
-            'COLLISION_COST': EnvParameters.COLLISION_COST,
-            'BLOCKING_COST': EnvParameters.BLOCKING_COST,
-            'lr': TrainingParameters.lr, 'GAMMA': TrainingParameters.GAMMA, 'LAM': TrainingParameters.LAM,
-            'CLIPRANGE': TrainingParameters.CLIP_RANGE, 'MAX_GRAD_NORM': TrainingParameters.MAX_GRAD_NORM,
-            'ENTROPY_COEF': TrainingParameters.ENTROPY_COEF,
-            'IN_VALUE_COEF': TrainingParameters.IN_VALUE_COEF, 'EX_VALUE_COEF': TrainingParameters.EX_VALUE_COEF,
-            'POLICY_COEF': TrainingParameters.POLICY_COEF,
-            'VALID_COEF': TrainingParameters.VALID_COEF, 'BLOCK_COEF': TrainingParameters.BLOCK_COEF,
-            'N_EPOCHS': TrainingParameters.N_EPOCHS, 'N_ENVS': TrainingParameters.N_ENVS,
-            'N_MAX_STEPS': TrainingParameters.N_MAX_STEPS,
-            'N_STEPS': TrainingParameters.N_STEPS, 'MINIBATCH_SIZE': TrainingParameters.MINIBATCH_SIZE,
-            'IMITATION_LEARNING_RATE': TrainingParameters.IMITATION_LEARNING_RATE,
-            'NET_SIZE': NetParameters.NET_SIZE, 'NUM_CHANNEL': NetParameters.NUM_CHANNEL,
-            'GOAL_REPR_SIZE': NetParameters.GOAL_REPR_SIZE, 'VECTOR_LEN': NetParameters.VECTOR_LEN,
-            'N_POSITION': NetParameters.N_POSITION,
-            'D_MODEL': NetParameters.D_MODEL, 'D_HIDDEN': NetParameters.D_HIDDEN, 'N_LAYERS': NetParameters.N_LAYERS,
-            'N_HEAD': NetParameters.N_HEAD, 'D_K': NetParameters.D_K, 'D_V': NetParameters.D_V,
-            'DIST_FACTOR': TieBreakingParameters.DIST_FACTOR, 'K': IntrinsicParameters.K,
-            'CAPACITY': IntrinsicParameters.CAPACITY, 'ADD_THRESHOLD': IntrinsicParameters.ADD_THRESHOLD,
-            'N_ADD_INTRINSIC': IntrinsicParameters.N_ADD_INTRINSIC,
-            'SURROGATE1': IntrinsicParameters.SURROGATE1, 'SURROGATE2': IntrinsicParameters.SURROGATE2,
-            'SEED': SetupParameters.SEED, 'USE_GPU_LOCAL': SetupParameters.USE_GPU_LOCAL,
-            'USE_GPU_GLOBAL': SetupParameters.USE_GPU_GLOBAL,
-            'NUM_GPU': SetupParameters.NUM_GPU, 'RETRAIN': RecordingParameters.RETRAIN,
-            'WANDB': RecordingParameters.WANDB,
-            'TENSORBOARD': RecordingParameters.TENSORBOARD, 'TXT_WRITER': RecordingParameters.TXT_WRITER,
-            'ENTITY': RecordingParameters.ENTITY,
-            'TIME': RecordingParameters.TIME, 'EXPERIMENT_PROJECT': RecordingParameters.EXPERIMENT_PROJECT,
-            'EXPERIMENT_NAME': RecordingParameters.EXPERIMENT_NAME,
-            'EXPERIMENT_NOTE': RecordingParameters.EXPERIMENT_NOTE,
-            'SAVE_INTERVAL': RecordingParameters.SAVE_INTERVAL, "BEST_INTERVAL": RecordingParameters.BEST_INTERVAL,
-            'GIF_INTERVAL': RecordingParameters.GIF_INTERVAL, 'EVAL_INTERVAL': RecordingParameters.EVAL_INTERVAL,
-            'EVAL_EPISODES': RecordingParameters.EVAL_EPISODES, 'RECORD_BEST': RecordingParameters.RECORD_BEST,
-            'MODEL_PATH': RecordingParameters.MODEL_PATH, 'GIFS_PATH': RecordingParameters.GIFS_PATH,
-            'SUMMARY_PATH': RecordingParameters.SUMMARY_PATH,
-            'TXT_NAME': RecordingParameters.TXT_NAME}
+param_classes = [EnvParameters, TrainingParameters, NetParameters,
+                 TieBreakingParameters, RecordingParameters]
+all_args = {}
+for params in param_classes:
+    all_args[params.__name__] = {k: v for k, v in params.__dict__.items()
+                                 if not k.startswith('_')}

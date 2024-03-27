@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+import json
 
 import numpy as np
 import ray
@@ -57,11 +58,11 @@ def main():
         global_summary = SummaryWriter(summary_path)
         print('Launching tensorboard...\n')
 
-        if RecordingParameters.TXT_WRITER:
-            txt_path = summary_path + '/' + RecordingParameters.TXT_NAME
+        if RecordingParameters.JSON_WRITER:
+            txt_path = summary_path + '/' + RecordingParameters.JSON_NAME
             with open(txt_path, "w") as f:
-                f.write(str(all_args))
-            print('Logging txt...\n')
+                json.dump(all_args, f, indent=4)
+            print('Logging config to json...\n')
 
     set_global_seeds(SetupParameters.SEED)
     setproctitle.setproctitle(RecordingParameters.EXPERIMENT_PROJECT
