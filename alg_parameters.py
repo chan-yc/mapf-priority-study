@@ -103,5 +103,6 @@ param_classes = [EnvParameters, TrainingParameters, NetParameters,
                  TieBreakingParameters, RecordingParameters]
 all_configs = {}
 for params in param_classes:
-    all_configs[params.__name__] = {k: v for k, v in params.__dict__.items()
-                                    if not k.startswith('_')}
+    for k, v in params.__dict__.items():
+        if not k.startswith('_'):
+            all_configs[k] = v

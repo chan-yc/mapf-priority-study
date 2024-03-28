@@ -10,7 +10,8 @@ from alg_parameters import SetupParameters, RecordingParameters, EnvParameters
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
-from util import reset_env, make_gif, set_global_seeds, get_torch_device
+from util import (reset_env, make_gif, set_global_seeds, get_torch_device,
+                  wandb_eval_log)
 
 
 NUM_TIMES = 100
@@ -107,30 +108,31 @@ def eval_model(model_save=None, device=torch.device('cpu')):
     # Recording
     wandb_id = wandb.util.generate_id()
     wandb.init(project='MAPF_evaluation',
-               name='evaluation_global_SCRIMP',
+               name='SCRIMP_Eval',
                # entity=RecordingParameters.ENTITY,
                notes=f'Training state: {json.dumps(model_dict["training_state"])}',
                config=model_dict['all_configs'],
                id=wandb_id,
                resume='allow')
+    eval_data = []
     print(f'Launched wandb. (ID: {wandb_id})\n')
 
     # Start evaluation for each experiment case
     print('Start evaluation.\n')
     print('-' * 70)
-    for n, case_params in enumerate(CASE):
+    for n, eval_params in enumerate(CASE):
         print(f'[Case: {n+1}/{len(CASE)}]')
 
-        save_gif = True  # Save one GIF for each case
+        save_gif = False  # Save one GIF for each case
 
-        num_agent, world_size, obstacle_prob = case_params
+        num_agent, world_size, obstacle_prob = eval_params
         env = MAPFEnv(num_agent, world_size, obstacle_prob, mode='eval')
         episodic_buffer = EpisodicBuffer(total_step=2e6, num_agent=num_agent)
 
         all_perf = {'episode_len': [], 'max_goals': [],
                     'collide': [], 'success_rate': []}
 
-        print(f'Agent: {case_params[0]}  World: {case_params[1]}  Obstacle: {case_params[2]}')
+        print(f'Agent: {eval_params[0]}  World: {eval_params[1]}  Obstacle: {eval_params[2]}')
 
         # Evaluation loop
         for j in range(NUM_TIMES):
@@ -152,27 +154,29 @@ def eval_model(model_save=None, device=torch.device('cpu')):
 
         print(f'Finished all {NUM_TIMES} episodes.')
 
-        # Compute log messages of mean metrics
-        perf_log = {}
+        # Compute mean metrics
+        perf_mean, perf_std = {}, {}
         for i in all_perf.keys():  # for all episodes
-            mean = round(np.nanmean(all_perf[i]), 2)
-            if i == 'success_rate':
-                perf_log[i] = f'{mean}'
-            else:
-                stdv = round(np.nanstd(all_perf[i]), 2)
-                perf_log[i] = f'{mean} ({stdv})'
+            perf_mean[i] = np.nanmean(all_perf[i])
+            if i != 'success_rate':
+                perf_std[i] = np.nanstd(all_perf[i])
 
         # Log results
-        mean_log = f"EL: {perf_log['episode_len']: <10}  " \
-                   f"MR: {perf_log['max_goals']: <10}  " \
-                   f"CO: {perf_log['collide']: <10}  " \
-                   f"SR: {perf_log['success_rate']: <10}"
-
+        eval_data.append({'eval_params': eval_params,
+                          'perf_mean': perf_mean,
+                          'perf_std': perf_std})
+        mean_log = f"EL: {perf_mean['episode_len']:.3f} ({perf_std['episode_len']:.3f}) " \
+                   f"MR: {perf_mean['max_goals']:.3f} ({perf_std['max_goals']:.3f}) " \
+                   f"CO: {perf_mean['collide']:.3f} ({perf_std['collide']:.3f}) " \
+                   f"SR: {perf_mean['success_rate']:.3f}"
         print(mean_log)
         print('-' * 70)
 
-    print('Completed evaluation.')
+    # Write results to wandb
+    wandb_eval_log(eval_data, model_dict['all_configs'])
     wandb.finish()
+
+    print('Completed evaluation.')
 
 
 if __name__ == "__main__":
