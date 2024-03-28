@@ -8,33 +8,47 @@ channels:
 dependencies:
   - python 3.9
 
-  ### use veclib for Apple Silicon, see https://stackoverflow.com/a/70255105
-  - blas=*=*accelerate*
+  #----------------------------------------------
+  # Base
+  #----------------------------------------------
+
+  ## Use veclib for Apple Silicon, see https://stackoverflow.com/a/70255105
+  # - blas=*=*accelerate*
+
   - numpy==1.21.6
+  - matplotlib
 
-  ### Install from pytorch channel to supoort Apple Silicon
-  - pytorch::pytorch
+  #----------------------------------------------
+  # PyTorch
+  #----------------------------------------------
 
-  ### Cuda for Linux / Windows
-  ### Choose your cuda version
+  ## Linux / Windows
+  - pytorch
+
+  ## Apple Silicon
+  # - pytorch::pytorch
+
+  #----------------------------------------------
+  # Cuda for Linux / Windows
+  #----------------------------------------------
+
+  ## Choose your cuda version
   # - pytorch-cuda=11.8
   # - pytorch-cuda=12.1
 
-  # Install pytorch on Linux, run on terminal
-  # pip3 install torch torchvision torchaudio
-
-
-  ### Install with Pip
+  #----------------------------------------------
+  # Install with Pip
+  #----------------------------------------------
   - pip
   - pip:
-    - setuptools==65.5.0 "wheel<0.40.0"
+    - wheel<0.40
+    - setuptools==65.5.0
     - Cython==0.29.28
     - protobuf==3.20.3
     - pyglet==1.5.14
     - gym==0.21.0
-    - imageio==2.9.0
+    - imageio==2.33.1
     - ipdb==0.13.9
-    - matploptlib
     - networkx==2.8.8
     - ray==1.8.0
     - setproctitle==1.2.2
