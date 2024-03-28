@@ -123,7 +123,7 @@ def eval_model(model_save=None, device=torch.device('cpu')):
     for n, eval_params in enumerate(CASE):
         print(f'[Case: {n+1}/{len(CASE)}]')
 
-        save_gif = False  # Save one GIF for each case
+        save_gif = True  # Save one GIF for each case
 
         num_agent, world_size, obstacle_prob = eval_params
         env = MAPFEnv(num_agent, world_size, obstacle_prob, mode='eval')
