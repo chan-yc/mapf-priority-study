@@ -101,6 +101,7 @@ def eval_model(net_checkpoint=None, device=torch.device('cpu')):
     net_dict = torch.load(net_checkpoint, map_location=device)
     model = Model(0, device)
     model.network.load_state_dict(net_dict['model'])
+    print(f'Loaded the trained model. ({net_checkpoint})\n')
 
     # Recording
     wandb_id = wandb.util.generate_id()
