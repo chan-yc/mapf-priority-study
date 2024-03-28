@@ -240,7 +240,7 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
                 f"Steps: {curr_steps: <8}  " \
                 f"Episode reward: {round(performance['per_r'], 2): <8}"
     print(state_log)
-    net_path = net_dir + "/net_checkpoint.pkl"
+    net_path = os.path.join(net_dir, RecordingParameters.MODEL_SAVE)
     net_checkpoint = {"model": model.network.state_dict(),
                       "optimizer": model.net_optimizer.state_dict(),
                       "all_configs": all_configs,

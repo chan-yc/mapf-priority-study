@@ -1,3 +1,4 @@
+import os
 import datetime
 
 """ Hyperparameters of SCRIMP!"""
@@ -29,8 +30,8 @@ class TrainingParameters:
     POLICY_COEF = 10
     VALID_COEF = 0.5
     BLOCK_COEF = 0.5
-    N_EPOCHS = 5
-    N_ENVS = 2  # number of processes
+    N_EPOCHS = 10
+    N_ENVS = 16  # number of processes
     N_MAX_STEPS = 1e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
     MINIBATCH_SIZE = int(2 ** 10)
@@ -77,7 +78,7 @@ class RecordingParameters:
     WANDB =  True
     TENSORBOARD = False
     JSON_WRITER = True
-    ENTITY = 'group'
+    ENTITY = ''
     TIME = datetime.datetime.now().strftime('%Y%m%d_%H%M')
     EXPERIMENT_PROJECT = 'MAPF'
     EXPERIMENT_NAME = 'SCRIMP_UPDATE'
@@ -88,9 +89,10 @@ class RecordingParameters:
     EVAL_INTERVAL = TrainingParameters.N_ENVS * TrainingParameters.N_STEPS  # interval of evaluating training model0
     EVAL_EPISODES = 1  # number of episode used in evaluation
     RECORD_BEST = False
-    MODEL_PATH = './models' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
-    GIFS_PATH = './gifs' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
-    SUMMARY_PATH = './summaries' + '/' + EXPERIMENT_PROJECT + '/' + EXPERIMENT_NAME + '_' + TIME
+    MODEL_SAVE = 'net_checkpoint.pkl'
+    MODEL_PATH = os.path.join('models', EXPERIMENT_PROJECT, EXPERIMENT_NAME + '_' + TIME)
+    GIFS_PATH = os.path.join('gifs', EXPERIMENT_PROJECT, EXPERIMENT_NAME + '_' + TIME)
+    SUMMARY_PATH = os.path.join('summaries', EXPERIMENT_PROJECT, EXPERIMENT_NAME + '_' + TIME)
     JSON_NAME = 'alg.json'
     LOSS_NAME = ['all_loss', 'policy_loss', 'policy_entropy', 'critic_loss_in',
                  'critic_loss_ex', 'valid_loss', 'blocking_loss', 'clipfrac',

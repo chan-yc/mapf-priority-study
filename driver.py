@@ -1,5 +1,4 @@
 import os
-import os.path as osp
 import json
 
 import numpy as np
@@ -31,7 +30,7 @@ def main():
     # Prepare for training
     if RecordingParameters.RETRAIN:
         restore_path = './local_model'
-        path_checkpoint = restore_path + "/net_checkpoint.pkl"
+        path_checkpoint = os.path.join(restore_path, RecordingParameters.MODEL_SAVE)
         net_dict = torch.load(path_checkpoint)
 
     if RecordingParameters.WANDB:
@@ -58,7 +57,7 @@ def main():
         print('Launched tensorboard.\n')
 
         if RecordingParameters.JSON_WRITER:
-            txt_path = summary_path + '/' + RecordingParameters.JSON_NAME
+            txt_path = os.path.join(summary_path, RecordingParameters.JSON_NAME)
             with open(txt_path, "w") as f:
                 json.dump(all_configs, f, indent=4)
             print('Logged config to json.\n')
@@ -240,14 +239,14 @@ def main():
                         best_perf = n_steps_perf['per_r']
                         last_best_step = curr_steps
                         print('Saving best model ')
-                        best_model_dir = osp.join(RecordingParameters.MODEL_PATH, 'best_model')
+                        best_model_dir = os.path.join(RecordingParameters.MODEL_PATH, 'best_model')
                         save_net(best_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)
 
             # Save model
             if interval_has_elapsed(curr_steps, last_model_save_step, RecordingParameters.SAVE_INTERVAL):
                 last_model_save_step = curr_steps
                 print('Saving model ...')
-                model_path = osp.join(RecordingParameters.MODEL_PATH, '%.5i' % curr_steps)
+                model_path = os.path.join(RecordingParameters.MODEL_PATH, '%.5i' % curr_steps)
                 save_net(model_path, global_model, curr_steps, curr_episodes, n_steps_perf)
 
     except KeyboardInterrupt:
@@ -256,7 +255,7 @@ def main():
     finally:
         # Save final model
         print('Saving final model ...')
-        final_model_dir = RecordingParameters.MODEL_PATH + '/final'
+        final_model_dir = os.path.join(RecordingParameters.MODEL_PATH, 'final')
         ensure_directory(final_model_dir)
         save_net(final_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)
 

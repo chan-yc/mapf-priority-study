@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import wandb
 
-from alg_parameters import *
+from alg_parameters import SetupParameters, RecordingParameters, EnvParameters
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
@@ -35,38 +35,38 @@ def one_step(env0, actions, model0, pre_value, input_state, ps, episode_perf,
     return reward, obs, vector, done, episode_perf, max_on_goal, on_goal
 
 
-def eval_episode(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
+def eval_episode(env, model, device, episodic_buffer0, num_agent, save_gif):
     """Evaluate one episode of the trained model"""
     episode_frames = []
 
     # Reset environment
-    done, _, obs, vector, _ = reset_env(eval_env, num_agent)
+    done, _, obs, vector, _ = reset_env(env, num_agent)
     message = Model.init_message(num_agent, device)
     hidden_state = Model.init_hidden_state(num_agent, device)
 
     # Reset buffer
     episodic_buffer0.reset(2e6, num_agent)
-    new_xy = eval_env.get_positions()
+    new_xy = env.get_positions()
     episodic_buffer0.batch_add(new_xy)
 
     episode_perf = {'episode_len': 0, 'max_goals': 0, 'collide': 0, 'success_rate': 0}
 
     # Run episode
     while not done:
-        if save_gif0:
-            episode_frames.append(eval_env._render())
+        if save_gif:
+            episode_frames.append(env._render())
 
         # Predict
         actions, hidden_state, v_all, ps, message \
-            = model0.final_evaluate(obs, vector, hidden_state, message, num_agent)
+            = model.final_evaluate(obs, vector, hidden_state, message, num_agent)
 
         # Move
         rewards, obs, vector, done, episode_perf, max_on_goals, on_goal \
-            = one_step(eval_env, actions, model0, v_all, hidden_state, ps,
+            = one_step(env, actions, model, v_all, hidden_state, ps,
                        episode_perf, message, episodic_buffer0)
 
         # Compute intrinsic rewards
-        new_xy = eval_env.get_positions()
+        new_xy = env.get_positions()
         processed_rewards, _, intrinsic_reward, min_dist \
             = episodic_buffer0.if_reward(new_xy, rewards, done, on_goal)
 
@@ -81,35 +81,36 @@ def eval_episode(eval_env, model0, device, episodic_buffer0, num_agent, save_gif
     episode_perf['collide'] = (episode_perf['collide'] / num_agent
                                / (episode_perf['episode_len'] + 1))
     # Save GIF
-    if save_gif0:
+    if save_gif:
         if not os.path.exists(RecordingParameters.GIFS_PATH):
             os.makedirs(RecordingParameters.GIFS_PATH)
-        episode_frames.append(eval_env._render())
+        episode_frames.append(env._render())
         images = np.array(episode_frames)
-        make_gif(images, f'{RecordingParameters.GIFS_PATH}/evaluation.gif')
+        image_name = f'agent_{num_agent}_grid_{env.SIZE}_obs_{env.PROB}.gif'
+        make_gif(images, os.path.join(RecordingParameters.GIFS_PATH, image_name))
 
     return episode_perf
 
 
-def eval_model(net_checkpoint=None, device=torch.device('cpu')):
+def eval_model(model_save=None, device=torch.device('cpu')):
     """Evaluate the trained model"""
 
     # Get the trained model
-    net_checkpoint = net_checkpoint or os.path.join('final', 'net_checkpoint.pkl')
-    if not os.path.exists(net_checkpoint):
-        raise FileNotFoundError(f"'{net_checkpoint}' does not exist!")
-    net_dict = torch.load(net_checkpoint, map_location=device)
+    model_save = model_save or os.path.join('final', RecordingParameters.MODEL_SAVE)
+    if not os.path.exists(model_save):
+        raise FileNotFoundError(f"'{model_save}' does not exist!")
+    model_dict = torch.load(model_save, map_location=device)
     model = Model(0, device)
-    model.network.load_state_dict(net_dict['model'])
-    print(f'Loaded the trained model. ({net_checkpoint})\n')
+    model.network.load_state_dict(model_dict['model'])
+    print(f'Loaded the trained model. ({model_save})\n')
 
     # Recording
     wandb_id = wandb.util.generate_id()
     wandb.init(project='MAPF_evaluation',
                name='evaluation_global_SCRIMP',
                # entity=RecordingParameters.ENTITY,
-               notes=f'Training state: {json.dumps(net_dict["training_state"])}',
-               config=net_dict['all_configs'],
+               notes=f'Training state: {json.dumps(model_dict["training_state"])}',
+               config=model_dict['all_configs'],
                id=wandb_id,
                resume='allow')
     print(f'Launched wandb. (ID: {wandb_id})\n')
@@ -134,7 +135,7 @@ def eval_model(net_checkpoint=None, device=torch.device('cpu')):
         # Evaluation loop
         for j in range(NUM_TIMES):
             # Evaluation
-            episode_perf = eval_episode(env, model, device,  episodic_buffer,
+            episode_perf = eval_episode(env, model, device, episodic_buffer,
                                         num_agent, save_gif)
             # Record metrics of one episode
             for metric in episode_perf.keys():
@@ -148,6 +149,7 @@ def eval_model(net_checkpoint=None, device=torch.device('cpu')):
             save_gif = False
             if (j+1) % 20 == 0:
                 print(f'Finished {j+1}/{NUM_TIMES} episodes.')
+
         print(f'Finished all {NUM_TIMES} episodes.')
 
         # Compute log messages of mean metrics
@@ -189,7 +191,7 @@ if __name__ == "__main__":
     if not os.path.isdir(args.model_path):
         raise ValueError('The provided model path is not a directory!')
 
-    net_checkpoint = os.path.join(args.model_path, 'net_checkpoint.pkl')
+    model_save = os.path.join(args.model_path, RecordingParameters.MODEL_SAVE)
     device = get_torch_device(use_gpu=args.gpu)
 
-    eval_model(net_checkpoint, device)
+    eval_model(model_save, device)
