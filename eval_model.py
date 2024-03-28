@@ -35,38 +35,38 @@ def one_step(env0, actions, model0, pre_value, input_state, ps, episode_perf,
     return reward, obs, vector, done, episode_perf, max_on_goal, on_goal
 
 
-def eval_episode(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
+def eval_episode(env, model, device, episodic_buffer0, num_agent, save_gif):
     """Evaluate one episode of the trained model"""
     episode_frames = []
 
     # Reset environment
-    done, _, obs, vector, _ = reset_env(eval_env, num_agent)
+    done, _, obs, vector, _ = reset_env(env, num_agent)
     message = Model.init_message(num_agent, device)
     hidden_state = Model.init_hidden_state(num_agent, device)
 
     # Reset buffer
     episodic_buffer0.reset(2e6, num_agent)
-    new_xy = eval_env.get_positions()
+    new_xy = env.get_positions()
     episodic_buffer0.batch_add(new_xy)
 
     episode_perf = {'episode_len': 0, 'max_goals': 0, 'collide': 0, 'success_rate': 0}
 
     # Run episode
     while not done:
-        if save_gif0:
-            episode_frames.append(eval_env._render())
+        if save_gif:
+            episode_frames.append(env._render())
 
         # Predict
         actions, hidden_state, v_all, ps, message \
-            = model0.final_evaluate(obs, vector, hidden_state, message, num_agent)
+            = model.final_evaluate(obs, vector, hidden_state, message, num_agent)
 
         # Move
         rewards, obs, vector, done, episode_perf, max_on_goals, on_goal \
-            = one_step(eval_env, actions, model0, v_all, hidden_state, ps,
+            = one_step(env, actions, model, v_all, hidden_state, ps,
                        episode_perf, message, episodic_buffer0)
 
         # Compute intrinsic rewards
-        new_xy = eval_env.get_positions()
+        new_xy = env.get_positions()
         processed_rewards, _, intrinsic_reward, min_dist \
             = episodic_buffer0.if_reward(new_xy, rewards, done, on_goal)
 
@@ -81,12 +81,12 @@ def eval_episode(eval_env, model0, device, episodic_buffer0, num_agent, save_gif
     episode_perf['collide'] = (episode_perf['collide'] / num_agent
                                / (episode_perf['episode_len'] + 1))
     # Save GIF
-    if save_gif0:
+    if save_gif:
         if not os.path.exists(RecordingParameters.GIFS_PATH):
             os.makedirs(RecordingParameters.GIFS_PATH)
-        episode_frames.append(eval_env._render())
+        episode_frames.append(env._render())
         images = np.array(episode_frames)
-        image_name = f'agent_{num_agent}_grid_{env.size}_obs_{env.prob}.gif'
+        image_name = f'agent_{num_agent}_grid_{env.SIZE}_obs_{env.PROB}.gif'
         make_gif(images, os.path.join(RecordingParameters.GIFS_PATH, image_name))
 
     return episode_perf
