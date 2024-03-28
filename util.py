@@ -82,7 +82,8 @@ def write_to_tensorboard(global_summary, step, performance_dict=None, mb_loss=No
     global_summary.flush()
 
 
-def write_to_wandb(step, performance_dict=None, mb_loss=None, imitation_loss=None, evaluate=True, greedy=True):
+def write_to_wandb(step, performance_dict=None, mb_loss=None, imitation_loss=None,
+                   evaluate=True, greedy=True):
     """record performance using wandb"""
     if imitation_loss is not None:
         wandb.log({'Loss/Imitation_loss': imitation_loss[0]}, step=step)
@@ -170,8 +171,8 @@ def reset_env(env, num_agent):
     return done, valid_actions, obs, vector, train_valid
 
 
-def one_step(env, one_episode_perf, actions, pre_block, model, pre_value, input_state, ps, no_reward, message,
-             episodic_buffer, num_agent):
+def one_step(env, one_episode_perf, actions, pre_block, model, pre_value,
+             input_state, ps, no_reward, message, episodic_buffer, num_agent):
     """run one step"""
     train_valid = np.zeros((num_agent, EnvParameters.N_ACTIONS), dtype=np.float32)
     obs, vector, rewards, done, next_valid_actions, on_goal, blockings, valid_actions, num_blockings, leave_goals, \
@@ -251,3 +252,25 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
                       }
     torch.save(net_checkpoint, net_path)
     print(f"Saved model to {net_path}\n")
+
+
+def wandb_eval_log(eval_data, all_configs):
+    """Log evaluation data to wandb table"""
+    columns = ['Agent', 'World', 'Obstacle', 'EL_mean', 'EL_std', 'MR_mean',
+               'MR_std', 'CO_mean', 'CO_std', 'SR_mean', 'Dist_factor']
+    table = wandb.Table(columns=columns)
+    for record in eval_data:
+        table.add_data(
+            record['eval_params'][0],  # Agent
+            record['eval_params'][1],  # World size
+            record['eval_params'][2],  # Obstacle density
+            record['perf_mean']['episode_len'],
+            record['perf_std']['episode_len'],
+            record['perf_mean']['max_goals'],
+            record['perf_std']['max_goals'],
+            record['perf_mean']['collide'],
+            record['perf_std']['collide'],
+            record['perf_mean']['success_rate'],
+            all_configs['DIST_FACTOR']
+        )
+    wandb.log({'eval_results': table})
