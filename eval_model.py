@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 
 import numpy as np
 import torch
@@ -9,10 +10,8 @@ from alg_parameters import *
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
-from util import reset_env, make_gif, set_global_seeds
+from util import reset_env, make_gif, set_global_seeds, get_torch_device
 
-
-# TODO: use `argparse` to pass the parameters
 
 NUM_TIMES = 100
 # CASE = [[8, 10, 0], [8, 10, 0.15], [8, 10, 0.3], [16, 20, 0.0], [16, 20, 0.15], [16, 20, 0.3], [32, 30, 0.0],
@@ -24,6 +23,7 @@ set_global_seeds(SetupParameters.SEED)
 
 def one_step(env0, actions, model0, pre_value, input_state, ps, episode_perf,
              message, episodic_buffer0):
+    """Run one step of the environment"""
     obs, vector, reward, done, _, on_goal, _, _, _, _, _, max_on_goal, \
         num_collide, _, modify_actions \
         = env0.joint_step(actions, episode_perf['episode_len'], model0, pre_value, input_state,
@@ -35,14 +35,14 @@ def one_step(env0, actions, model0, pre_value, input_state, ps, episode_perf,
     return reward, obs, vector, done, episode_perf, max_on_goal, on_goal
 
 
-def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
-    """Evaluate Model."""
+def eval_episode(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
+    """Evaluate one episode of the trained model"""
     episode_frames = []
 
     # Reset environment
     done, _, obs, vector, _ = reset_env(eval_env, num_agent)
-    message = Model.init_message(num_agent, torch.device('cpu'))
-    hidden_state = Model.init_hidden_state(num_agent, torch.device('cpu'))
+    message = Model.init_message(num_agent, device)
+    hidden_state = Model.init_hidden_state(num_agent, device)
 
     # Reset buffer
     episodic_buffer0.reset(2e6, num_agent)
@@ -91,13 +91,17 @@ def evaluate(eval_env, model0, device, episodic_buffer0, num_agent, save_gif0):
     return episode_perf
 
 
-def main():
+def eval_model(net_checkpoint=None, device=torch.device('cpu')):
+    """Evaluate the trained model"""
+
     # Get the trained model
-    model_path = './final'
-    path_checkpoint = model_path + "/net_checkpoint.pkl"
-    net_dict = torch.load(path_checkpoint, map_location=torch.device('cpu'))
-    model = Model(0, torch.device('cpu'))
+    net_checkpoint = net_checkpoint or os.path.join('final', 'net_checkpoint.pkl')
+    if not os.path.exists(net_checkpoint):
+        raise FileNotFoundError(f"'{net_checkpoint}' does not exist!")
+    net_dict = torch.load(net_checkpoint, map_location=device)
+    model = Model(0, device)
     model.network.load_state_dict(net_dict['model'])
+    print(f'Loaded the trained model. ({net_checkpoint})\n')
 
     # Recording
     wandb_id = wandb.util.generate_id()
@@ -130,8 +134,8 @@ def main():
         # Evaluation loop
         for j in range(NUM_TIMES):
             # Evaluation
-            episode_perf = evaluate(env, model, torch.device('cpu'),
-                                    episodic_buffer, num_agent, save_gif)
+            episode_perf = eval_episode(env, model, device,  episodic_buffer,
+                                        num_agent, save_gif)
             # Record metrics of one episode
             for metric in episode_perf.keys():
                 if metric == 'episode_len' and episode_perf['success_rate'] == 1:
@@ -170,4 +174,22 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+
+    # Create the parser
+    parser = argparse.ArgumentParser(description='Evaluate a trained model.')
+    # Model path argument
+    parser.add_argument('model_path', type=str, nargs='?', default='final',
+                        help='directory of the trained model, defaults to \'./final\'')
+    # GPU argument
+    parser.add_argument('-g', '--gpu', action='store_true', help='use GPU if specified')
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Check if the provided path is a directory
+    if not os.path.isdir(args.model_path):
+        raise ValueError('The provided model path is not a directory!')
+
+    net_checkpoint = os.path.join(args.model_path, 'net_checkpoint.pkl')
+    device = get_torch_device(use_gpu=args.gpu)
+
+    eval_model(net_checkpoint, device)

@@ -144,6 +144,7 @@ def write_to_wandb(step, performance_dict=None, mb_loss=None, imitation_loss=Non
 
 def make_gif(images, file_name):
     """record gif"""
+    print('Saving GIF ...')
     imageio.mimwrite(file_name, images, subrectangles=True)
     print(f'Saved GIF to {file_name}\n')
 
