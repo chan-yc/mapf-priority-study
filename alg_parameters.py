@@ -55,6 +55,7 @@ class NetParameters:
 # TODO Examinate the distance factor! Add more factors if needed
 class TieBreakingParameters:
     DIST_FACTOR = 0.1
+    BLOCK_FACTOR = 0.1
 
 
 class IntrinsicParameters:
