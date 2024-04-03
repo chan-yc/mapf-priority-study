@@ -253,7 +253,7 @@ class State(object):
         return new_action, new_status, should_stop
 
     def value_compare(self, model, agent_indexes, pre_value, input_state, curr_position, past_position, valid_action,
-                      actions, ps, swap, no_reward, message, episodic_buffer, agent_status):
+                      actions, ps, swap, no_reward, message, blocking, episodic_buffer, agent_status):
         """breaking a tie based on the predicted team state value"""
         modified_valid_action = copy.deepcopy(valid_action)
         new_action, new_status, should_stop = self.reselect_action(modified_valid_action, actions, ps,
@@ -307,14 +307,14 @@ class State(object):
 
         distance = np.asarray(distance) / (np.sum(distance) + 1e-6)
         # TODO change the priority prob
-        diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance
+        diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance + TieBreakingParameters.BLOCK_FACTOR * blocking
         diff_dis = F.softmax(torch.from_numpy(diffs), dim=-1)  # the final priority probability
         diff_dis = diff_dis.detach().numpy()
         winner = agent_indexes[np.random.choice(len(agent_indexes), p=diff_dis)]
 
         return winner, new_action
 
-    def joint_move(self, true_actions, model, pre_value, input_state, ps, no_reward, message,
+    def joint_move(self, true_actions, model, pre_value, input_state, ps, no_reward, message, blocking,
                    episodic_buffer):
         """simultaneously move agents and checks for collisions on the joint action """
         imag_state = (self.state > 0).astype(int)  # map of world 0-no agent, 1- have agent
@@ -386,7 +386,7 @@ class State(object):
                                                                       curr_position,
                                                                       past_position, valid_action, actions, ps,
                                                                       swap=False, no_reward=no_reward, message=message,
-                                                                      episodic_buffer=episodic_buffer,
+                                                                      blocking=blocking, episodic_buffer=episodic_buffer,
                                                                       agent_status=agent_status)
                             compared = True
                     else:
@@ -394,7 +394,7 @@ class State(object):
                                                                   curr_position,
                                                                   past_position, valid_action, actions, ps,
                                                                   swap=False, no_reward=no_reward, message=message,
-                                                                  episodic_buffer=episodic_buffer,
+                                                                  blocking=blocking, episodic_buffer=episodic_buffer,
                                                                   agent_status=agent_status)
                         compared = True
 
@@ -493,7 +493,7 @@ class State(object):
                                                                       curr_position,
                                                                       past_position, valid_action, actions, ps,
                                                                       swap=True, no_reward=no_reward, message=message,
-                                                                      episodic_buffer=episodic_buffer,
+                                                                      blocking=blocking, episodic_buffer=episodic_buffer,
                                                                       agent_status=agent_status)
                             compared = True
                     else:
@@ -501,7 +501,7 @@ class State(object):
                                                                   curr_position,
                                                                   past_position, valid_action, actions, ps,
                                                                   swap=True, no_reward=no_reward, message=message,
-                                                                  episodic_buffer=episodic_buffer,
+                                                                  blocking=blocking, episodic_buffer=episodic_buffer,
                                                                   agent_status=agent_status)
                         compared = True
 
@@ -954,11 +954,11 @@ class MAPFEnv(gym.Env):
             available_actions.remove(opposite_actions[prev_action])
         return available_actions
 
-    def joint_step(self, actions, num_step, model, pre_value, input_state, ps, no_reward, message,
+    def joint_step(self, actions, num_step, model, pre_value, input_state, ps, no_reward, message, blocking,
                    episodic_buffer):
         """execute joint action and obtain reward"""
         action_status, modify_actions = self.world.joint_move(actions, model, pre_value, input_state, ps, no_reward,
-                                                              message, episodic_buffer)
+                                                              message, blocking, episodic_buffer)
         valid_actions = [action_status[i] >= 0 for i in range(self.num_agents)]
         #     2: action executed and agent leave its own goal
         #     1: action executed and reached/stayed on goal
