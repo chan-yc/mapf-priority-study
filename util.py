@@ -178,7 +178,7 @@ def one_step(env, one_episode_perf, actions, pre_block, model, pre_value,
     obs, vector, rewards, done, next_valid_actions, on_goal, blockings, valid_actions, num_blockings, leave_goals, \
         num_on_goal, max_on_goal, num_collide, action_status, modify_actions \
         = env.joint_step(actions, one_episode_perf['num_step'], model, pre_value,
-                         input_state, ps, no_reward, message, episodic_buffer)
+                         input_state, ps, no_reward, message, pre_block, episodic_buffer)
 
     one_episode_perf['block'] += num_blockings
     one_episode_perf['num_leave_goal'] += leave_goals

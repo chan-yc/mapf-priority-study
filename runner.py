@@ -255,7 +255,7 @@ class Runner(object):
             mb_hidden_state.append([hidden_state[0].cpu().detach().numpy(), hidden_state[1].cpu().detach().numpy()])
             mb_message.append(message.cpu().detach().numpy())  # Move message tensor to CPU
 
-            blocking, hidden_state, message = self.local_model.generate_state(obs, vector, hidden_state, message)
+            block, hidden_state, message = self.local_model.generate_state(obs, vector, hidden_state, message)
 
             actions = np.zeros(self.imitation_num_agent)
             for i in range(self.imitation_num_agent):
@@ -267,7 +267,7 @@ class Runner(object):
 
             obs, vector, rewards, done, _, on_goal, _, valid_actions, _, _, _, _, _, _, _ = \
                 self.imitation_env.joint_step(actions, 0, model='imitation', pre_value=None, input_state=None,
-                                              ps=None, no_reward=None, message=None, blocking=blocking, episodic_buffer=None)
+                                              ps=None, no_reward=None, message=None, block=None, episodic_buffer=None)
 
             vector[:, :, -1] = actions
             new_xy = self.imitation_env.get_positions()

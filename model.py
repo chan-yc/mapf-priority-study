@@ -88,20 +88,22 @@ class Model(object):
         return v_in, v_ex, v_all
 
     def generate_state(self, obs, vector, input_state, message):
-        """generate corresponding hidden states and messages in imitation learning"""
+        """generate corresponding block, hidden states and messages in imitation learning"""
         obs = torch.from_numpy(obs).to(self.device)
         vector = torch.from_numpy(vector).to(self.device)
-        _, _, _, blocking, _, output_state, _, message = self.network(obs, vector, input_state, message)
-        return blocking, output_state, message
+        _, _, _, block, _, output_state, _, message = self.network(obs, vector, input_state, message)
+        return block, output_state, message
 
     def final_evaluate(self, observation, vector, input_state, message, num_agent, greedy=False):
         """using neural network in independent evaluations for prediction"""
         eval_action = np.zeros(num_agent)
         observation = torch.from_numpy(np.asarray(observation)).to(self.device)
         vector = torch.from_numpy(vector).to(self.device)
-        ps, v_in, v_ex, _, _, output_state, _, message = self.network(observation, vector, input_state, message)
+        ps, v_in, v_ex, block, _, output_state, _, message = self.network(observation, vector, input_state, message)
 
         ps = np.squeeze(ps.cpu().detach().numpy())
+        block = np.squeeze(block.cpu().detach().numpy())
+
         greedy_action = np.argmax(ps, axis=-1)
         scale_factor = IntrinsicParameters.SURROGATE1
         v_all = v_ex + scale_factor * v_in
@@ -112,7 +114,7 @@ class Model(object):
                 eval_action[i] = np.random.choice(range(EnvParameters.N_ACTIONS), p=ps[i].ravel())
         if greedy:
             eval_action = greedy_action
-        return eval_action, output_state, v_all, ps, message
+        return eval_action, output_state, v_all, ps, message, block
 
     def train(self, observation, vector, returns_in, returns_ex, returns_all, old_v_in, old_v_ex, old_v_all, action,
               old_ps, input_state, train_valid, target_blockings, message):
