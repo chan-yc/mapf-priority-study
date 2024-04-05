@@ -312,13 +312,15 @@ class State(object):
 
         distance = np.asarray(distance) / (np.sum(distance) + 1e-6)
         blocks = np.asarray(blocks, dtype=np.float32)
-        print("Congestion:", congestions)
+        # print("Congestion:", congestions)
         congestions = np.asarray(congestions) / (np.sum(congestions) + 1e-6)
-        print("Normalized Congestion:", congestions)
+        # print("Normalized Congestion:", congestions)
 
         # TODO change the priority prob
-        diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance + TieBreakingParameters.BLOCK_FACTOR * blocks + \
-                TieBreakingParameters.CONGESTION_FACTOR * congestions
+        diffs = np.asarray(diffs, dtype=np.float32) \
+            + TieBreakingParameters.DIST_FACTOR * distance + \
+            + TieBreakingParameters.BLOCK_FACTOR * blocks + \
+            + TieBreakingParameters.CONGESTION_FACTOR * congestions
         diff_dis = F.softmax(torch.from_numpy(diffs), dim=-1)  # the final priority probability
         diff_dis = diff_dis.detach().numpy()
         winner = agent_indexes[np.random.choice(len(agent_indexes), p=diff_dis)]

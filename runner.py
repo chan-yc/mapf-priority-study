@@ -255,7 +255,7 @@ class Runner(object):
             mb_hidden_state.append([hidden_state[0].cpu().detach().numpy(), hidden_state[1].cpu().detach().numpy()])
             mb_message.append(message.cpu().detach().numpy())  # Move message tensor to CPU
 
-            block, hidden_state, message = self.local_model.generate_state(obs, vector, hidden_state, message)
+            hidden_state, message = self.local_model.generate_state(obs, vector, hidden_state, message)
 
             actions = np.zeros(self.imitation_num_agent)
             for i in range(self.imitation_num_agent):

@@ -88,11 +88,11 @@ class Model(object):
         return v_in, v_ex, v_all
 
     def generate_state(self, obs, vector, input_state, message):
-        """generate corresponding block, hidden states and messages in imitation learning"""
+        """generate corresponding hidden states and messages in imitation learning"""
         obs = torch.from_numpy(obs).to(self.device)
         vector = torch.from_numpy(vector).to(self.device)
-        _, _, _, block, _, output_state, _, message = self.network(obs, vector, input_state, message)
-        return block, output_state, message
+        _, _, _, _, _, output_state, _, message = self.network(obs, vector, input_state, message)
+        return output_state, message
 
     def final_evaluate(self, observation, vector, input_state, message, num_agent, greedy=False):
         """using neural network in independent evaluations for prediction"""
