@@ -121,7 +121,7 @@ class State(object):
         if mag != 0:  # normalized
             dx = dx / mag
             dy = dy / mag
-        return [poss_map, goal_map, goals_map, obs_map, guide_map[0], guide_map[1], guide_map[2], guide_map[3]], [dx, dy, mag]
+        return [poss_map, goal_map, goals_map, obs_map, guide_map[0], guide_map[1], guide_map[2], guide_map[3]], [dx, dy, mag], len(visible_agents)
 
     def imag_xy_position(self, moved_position):
         """function used only by the tie-breaking strategy"""
@@ -258,10 +258,14 @@ class State(object):
         modified_valid_action = copy.deepcopy(valid_action)
         new_action, new_status, should_stop = self.reselect_action(modified_valid_action, actions, ps,
                                                                    past_position, agent_indexes, swap)
-        diffs, distance, blocks = [], [], []
-        
+        diffs, distance, blocks, congestions = [], [], [], []
+
         for i in agent_indexes:  # one case
             blocks.append(block[i])
+
+            num_visible_agents = self.imag_obs(i + 1, curr_position)[2]
+            congestions.append(num_visible_agents)
+
             moved_position = copy.deepcopy(curr_position)
             dx = self.get_goal(i + 1)[0] - curr_position[i][0]  # distance on x axes
             dy = self.get_goal(i + 1)[1] - curr_position[i][1]  # distance on y axes
@@ -308,9 +312,13 @@ class State(object):
 
         distance = np.asarray(distance) / (np.sum(distance) + 1e-6)
         blocks = np.asarray(blocks, dtype=np.float32)
+        print("Congestion:", congestions)
+        congestions = np.asarray(congestions) / (np.sum(congestions) + 1e-6)
+        print("Normalized Congestion:", congestions)
 
         # TODO change the priority prob
-        diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance + TieBreakingParameters.BLOCK_FACTOR * blocks
+        diffs = np.asarray(diffs, dtype=np.float32) + TieBreakingParameters.DIST_FACTOR * distance + TieBreakingParameters.BLOCK_FACTOR * blocks + \
+                TieBreakingParameters.CONGESTION_FACTOR * congestions
         diff_dis = F.softmax(torch.from_numpy(diffs), dim=-1)  # the final priority probability
         diff_dis = diff_dis.detach().numpy()
         winner = agent_indexes[np.random.choice(len(agent_indexes), p=diff_dis)]
