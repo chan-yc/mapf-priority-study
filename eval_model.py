@@ -15,10 +15,12 @@ from util import (reset_env, make_gif, set_global_seeds, get_torch_device,
 
 
 NUM_TIMES = 100
-# CASE = [[8, 10, 0], [8, 10, 0.15], [8, 10, 0.3], [16, 20, 0.0], [16, 20, 0.15], [16, 20, 0.3], [32, 30, 0.0],
-#         [32, 30, 0.15], [32, 30, 0.3], [64, 40, 0.0], [64, 40, 0.15], [64, 40, 0.3], [128, 40, 0.0],
-#         [128, 40, 0.15], [128, 40, 0.3]]
-CASE = [[8, 10, 0], [8, 10, 0.15], [8, 10, 0.3]]
+CASE = [
+    [8, 10, 0.0], [8, 10, 0.15], [8, 10, 0.3],
+    [16, 20, 0.0], [16, 20, 0.15], [16, 20, 0.3],
+    [32, 30, 0.0], [32, 30, 0.15], [32, 30, 0.3],
+    [64, 40, 0.0], [64, 40, 0.15], [64, 40, 0.3],
+]
 set_global_seeds(SetupParameters.SEED)
 
 
@@ -93,7 +95,8 @@ def eval_episode(env, model, device, episodic_buffer0, num_agent, save_gif):
     return episode_perf
 
 
-def eval_model(model_save=None, device=torch.device('cpu')):
+def eval_model(model_save=None, expt_name='SCRIMP_Eval', use_wandb=True,
+               device=torch.device('cpu')):
     """Evaluate the trained model"""
 
     # Get the trained model
@@ -106,16 +109,17 @@ def eval_model(model_save=None, device=torch.device('cpu')):
     print(f'Loaded the trained model. ({model_save})\n')
 
     # Recording
-    wandb_id = wandb.util.generate_id()
-    wandb.init(project='MAPF_evaluation',
-               name='SCRIMP_Eval',
-               # entity=RecordingParameters.ENTITY,
-               notes=f'Training state: {json.dumps(model_dict["training_state"])}',
-               config=model_dict['all_configs'],
-               id=wandb_id,
-               resume='allow')
     eval_data = []
-    print(f'Launched wandb. (ID: {wandb_id})\n')
+    if use_wandb:
+        wandb_id = wandb.util.generate_id()
+        wandb.init(project='MAPF_evaluation',
+                   name=expt_name,
+                   # entity=RecordingParameters.ENTITY,
+                   notes=f'Training state: {json.dumps(model_dict["training_state"])}',
+                   config=model_dict['all_configs'],
+                   id=wandb_id,
+                   resume='allow')
+        print(f'Launched wandb. (ID: {wandb_id})\n')
 
     # Start evaluation for each experiment case
     print('Start evaluation.\n')
@@ -173,8 +177,9 @@ def eval_model(model_save=None, device=torch.device('cpu')):
         print('-' * 70)
 
     # Write results to wandb
-    wandb_eval_log(eval_data, model_dict['all_configs'])
-    wandb.finish()
+    if use_wandb:
+        wandb_eval_log(eval_data, model_dict['all_configs'])
+        wandb.finish()
 
     print('Completed evaluation.')
 
@@ -188,14 +193,21 @@ if __name__ == "__main__":
                         help='directory of the trained model, defaults to \'./final\'')
     # GPU argument
     parser.add_argument('-g', '--gpu', action='store_true', help='use GPU if specified')
+    # Wandb argument
+    parser.add_argument('--off-wandb', action='store_true', help='turn off wandb')
+    # Expt name argument
+    parser.add_argument('-n', '--expt-name', type=str, default='SCRIMP_Eval',
+                        help='name of the experiment, defaults to \'SCRIMP_Eval\'')
+
     # Parse the arguments
     args = parser.parse_args()
 
     # Check if the provided path is a directory
     if not os.path.isdir(args.model_path):
         raise ValueError('The provided model path is not a directory!')
-
     model_save = os.path.join(args.model_path, RecordingParameters.MODEL_SAVE)
-    device = get_torch_device(use_gpu=args.gpu)
 
-    eval_model(model_save, device)
+    device = get_torch_device(use_gpu=args.gpu)
+    use_wandb = not args.off_wandb
+
+    eval_model(model_save, args.expt_name, use_wandb, device)
