@@ -23,12 +23,12 @@ set_global_seeds(SetupParameters.SEED)
 
 
 def one_step(env0, actions, model0, pre_value, input_state, ps, episode_perf,
-             message, episodic_buffer0):
+             message, block, episodic_buffer0):
     """Run one step of the environment"""
     obs, vector, reward, done, _, on_goal, _, _, _, _, _, max_on_goal, \
         num_collide, _, modify_actions \
         = env0.joint_step(actions, episode_perf['episode_len'], model0, pre_value, input_state,
-                          ps, no_reward=False, message=message, episodic_buffer=episodic_buffer0)
+                          ps, no_reward=False, message=message, block=block, episodic_buffer=episodic_buffer0)
 
     vector[:, :, -1] = modify_actions
     episode_perf['episode_len'] += 1
@@ -58,13 +58,13 @@ def eval_episode(env, model, device, episodic_buffer0, num_agent, save_gif):
             episode_frames.append(env._render())
 
         # Predict
-        actions, hidden_state, v_all, ps, message \
+        actions, hidden_state, v_all, ps, message, block \
             = model.final_evaluate(obs, vector, hidden_state, message, num_agent)
 
         # Move
         rewards, obs, vector, done, episode_perf, max_on_goals, on_goal \
             = one_step(env, actions, model, v_all, hidden_state, ps,
-                       episode_perf, message, episodic_buffer0)
+                       episode_perf, message, block, episodic_buffer0)
 
         # Compute intrinsic rewards
         new_xy = env.get_positions()
