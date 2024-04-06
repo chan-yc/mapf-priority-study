@@ -191,11 +191,11 @@ class Model(object):
 
             # total loss
             all_loss = - policy_loss \
-                       - entropy * TrainingParameters.ENTROPY_COEF \
-                       + TrainingParameters.IN_VALUE_COEF * critic_loss_in \
-                       + TrainingParameters.EX_VALUE_COEF * critic_loss_ex \
-                       + TrainingParameters.VALID_COEF * valid_loss \
-                       + TrainingParameters.BLOCK_COEF * blocking_loss
+                - entropy * TrainingParameters.ENTROPY_COEF \
+                + TrainingParameters.IN_VALUE_COEF * critic_loss_in \
+                + TrainingParameters.EX_VALUE_COEF * critic_loss_ex \
+                + TrainingParameters.VALID_COEF * valid_loss \
+                + TrainingParameters.BLOCK_COEF * blocking_loss
 
         clip_frac = torch.mean(torch.greater(torch.abs(ratio - 1.0), TrainingParameters.CLIP_RANGE).float())
 

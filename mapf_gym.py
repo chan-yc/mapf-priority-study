@@ -318,8 +318,8 @@ class State(object):
 
         # TODO change the priority prob
         diffs = np.asarray(diffs, dtype=np.float32) \
-            + TieBreakingParameters.DIST_FACTOR * distance + \
-            + TieBreakingParameters.BLOCK_FACTOR * blocks + \
+            + TieBreakingParameters.DIST_FACTOR * distance \
+            + TieBreakingParameters.BLOCK_FACTOR * blocks \
             + TieBreakingParameters.CONGESTION_FACTOR * congestions
         diff_dis = F.softmax(torch.from_numpy(diffs), dim=-1)  # the final priority probability
         diff_dis = diff_dis.detach().numpy()
