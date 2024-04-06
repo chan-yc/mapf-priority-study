@@ -9,7 +9,7 @@ import torch
 import wandb
 
 from alg_parameters import (SetupParameters, EnvParameters, TrainingParameters,
-                            NetParameters, RecordingParameters, all_configs)
+                            RecordingParameters, get_all_configs)
 from episodic_buffer import EpisodicBuffer
 from mapf_gym import MAPFEnv
 from model import Model
@@ -24,7 +24,7 @@ ray.init(num_gpus=SetupParameters.NUM_GPU)
 print("Start training MAPF using SCRIMP.\n")
 
 
-def main():
+def train_model():
     """main code"""
 
     # Prepare for training
@@ -42,7 +42,7 @@ def main():
                    name=RecordingParameters.EXPERIMENT_NAME,
                    # entity=RecordingParameters.ENTITY,
                    notes=RecordingParameters.EXPERIMENT_NOTE,
-                   config=all_configs,
+                   config=get_all_configs(),
                    id=wandb_id,
                    resume='allow')
         print(f'Launched wandb. (ID: {wandb_id})\n')
@@ -59,7 +59,7 @@ def main():
         if RecordingParameters.JSON_WRITER:
             txt_path = os.path.join(summary_path, RecordingParameters.JSON_NAME)
             with open(txt_path, "w") as f:
-                json.dump(all_configs, f, indent=4)
+                json.dump(get_all_configs(), f, indent=4)
             print('Logged config to json.\n')
 
     set_global_seeds(SetupParameters.SEED)
@@ -95,9 +95,9 @@ def main():
     print(state_log)
 
     last_eval_step = -RecordingParameters.EVAL_INTERVAL - 1
-    last_best_step = -RecordingParameters.BEST_INTERVAL - 1
+    last_best_step = 0
     last_gif_save_step = -RecordingParameters.GIF_INTERVAL - 1
-    last_model_save_step = -RecordingParameters.SAVE_INTERVAL - 1
+    last_model_save_step = 0
 
     # Start training
     try:
@@ -257,7 +257,8 @@ def main():
         print('Saving final model ...')
         final_model_dir = os.path.join(RecordingParameters.MODEL_PATH, 'final')
         ensure_directory(final_model_dir)
-        save_net(final_model_dir, global_model, curr_steps, curr_episodes, n_steps_perf)
+        final_model_path = save_net(final_model_dir, global_model, curr_steps,
+                                    curr_episodes, n_steps_perf)
 
         # Close tensorboard
         if RecordingParameters.TENSORBOARD:
@@ -267,6 +268,8 @@ def main():
         for e in envs:
             ray.kill(e)
         if RecordingParameters.WANDB:
+            # Save final model to wandb
+            wandb.save(final_model_path, final_model_dir, policy='now')
             wandb.finish()
 
 
@@ -348,4 +351,4 @@ def evaluate(eval_env, episodic_buffer, model, device, save_gif, curr_steps, gre
 
 
 if __name__ == "__main__":
-    main()
+    train_model()

@@ -244,7 +244,7 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
     net_path = os.path.join(net_dir, RecordingParameters.MODEL_SAVE)
     net_checkpoint = {"model": model.network.state_dict(),
                       "optimizer": model.net_optimizer.state_dict(),
-                      "all_configs": all_configs,
+                      "all_configs": get_all_configs(),
                       "training_state": {"step": curr_steps,
                                          "episode": curr_episodes,
                                          "reward": performance['per_r'],
@@ -252,6 +252,7 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
                       }
     torch.save(net_checkpoint, net_path)
     print(f"Saved model to {net_path}\n")
+    return net_path
 
 
 def wandb_eval_log(eval_data, all_configs):
