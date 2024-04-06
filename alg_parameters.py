@@ -31,7 +31,7 @@ class TrainingParameters:
     VALID_COEF = 0.5
     BLOCK_COEF = 0.5
     N_EPOCHS = 10
-    N_ENVS = 2  # number of processes
+    N_ENVS = 16  # number of processes
     N_MAX_STEPS = 1e7  # maximum number of time steps used in training
     N_STEPS = 2 ** 10  # number of time steps per process per data collection
     MINIBATCH_SIZE = int(2 ** 10)
@@ -54,9 +54,9 @@ class NetParameters:
 
 # TODO Examinate the distance factor! Add more factors if needed
 class TieBreakingParameters:
-    DIST_FACTOR = 0.1
-    BLOCK_FACTOR = 0.1
-    CONGESTION_FACTOR = 0.1
+    DIST_FACTOR = 0.1          # mu
+    BLOCK_FACTOR = 0.1         # beta
+    CONGESTION_FACTOR = 0.1    # gamma
 
 
 class IntrinsicParameters:
@@ -77,7 +77,7 @@ class SetupParameters:
 
 class RecordingParameters:
     RETRAIN = False
-    WANDB =  True
+    WANDB = True
     TENSORBOARD = False
     JSON_WRITER = True
     ENTITY = ''
@@ -101,10 +101,12 @@ class RecordingParameters:
                  'grad_norm', 'advantage']
 
 
-param_classes = [EnvParameters, TrainingParameters, NetParameters,
-                 TieBreakingParameters, RecordingParameters]
-all_configs = {}
-for params in param_classes:
-    for k, v in params.__dict__.items():
-        if not k.startswith('_'):
-            all_configs[k] = v
+def get_all_configs():
+    param_classes = [EnvParameters, TrainingParameters, NetParameters,
+                     TieBreakingParameters, RecordingParameters]
+    configs = {}
+    for params in param_classes:
+        for k, v in params.__dict__.items():
+            if not k.startswith('_'):
+                configs[k] = v
+    return configs
