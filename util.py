@@ -258,7 +258,8 @@ def save_net(net_dir, model, curr_steps, curr_episodes, performance):
 def wandb_eval_log(eval_data, all_configs):
     """Log evaluation data to wandb table"""
     columns = ['Agent', 'World', 'Obstacle', 'EL_mean', 'EL_std', 'MR_mean',
-               'MR_std', 'CO_mean', 'CO_std', 'SR_mean', 'Dist_factor']
+               'MR_std', 'CO_mean', 'CO_std', 'SR_mean', 'Dist_factor',
+               'Block_factor', 'Congestion_factor']
     table = wandb.Table(columns=columns)
     for record in eval_data:
         table.add_data(
@@ -272,6 +273,8 @@ def wandb_eval_log(eval_data, all_configs):
             record['perf_mean']['collide'],
             record['perf_std']['collide'],
             record['perf_mean']['success_rate'],
-            all_configs['DIST_FACTOR']
+            all_configs['DIST_FACTOR'],
+            all_configs['BLOCK_FACTOR'],
+            all_configs['CONGESTION_FACTOR']
         )
     wandb.log({'eval_results': table})
