@@ -1,4 +1,5 @@
 import os
+import argparse
 import datetime
 
 from train_model import train_model
@@ -30,7 +31,7 @@ CONFIG_SETS = [
 ]
 
 
-def multi_train():
+def multi_train(wandb_id=None, retrain_path=None):
     """Train the model with multiple configurations"""
     print(f'Running {len(CONFIG_SETS)} experiments.\n')
 
@@ -42,8 +43,20 @@ def multi_train():
         update_expt_info(configs['expt_name'])
         for param_cls, param_name, param_val in configs['params']:
             setattr(param_cls, param_name, param_val)
+
         # Full model training
-        train_model()
+        if retrain_path is not None:
+            RecordingParameters.RETRAIN = True
+        else:
+            RecordingParameters.RETRAIN = False
+
+        for _ in range(10):  # retry 10 times
+            status, wandb_id = train_model(wandb_id, retrain_path)
+            if status != 'failed':
+                break
+            else:
+                RecordingParameters.RETRAIN = True
+                retrain_path = os.path.join(RecordingParameters.MODEL_PATH, 'final')
 
 
 def update_expt_info(name):
@@ -58,4 +71,11 @@ def update_expt_info(name):
 
 
 if __name__ == '__main__':
-    multi_train()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r', '--retrain-path', type=str, default=None, help='Retrain the model')
+    parser.add_argument('-w', '--wandb-id', type=str, default=None, help='Use wandb')
+
+    args = parser.parse_args()
+
+    multi_train(args.wandb_id, args.retrain_path)

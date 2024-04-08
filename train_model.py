@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 
 import numpy as np
 import ray
@@ -24,19 +25,16 @@ ray.init(num_gpus=SetupParameters.NUM_GPU)
 print("Start training MAPF using SCRIMP.\n")
 
 
-def train_model():
+def train_model(wandb_id=None, retrain_path='./local_model'):
     """main code"""
 
     # Prepare for training
     if RecordingParameters.RETRAIN:
-        restore_path = './local_model'
-        path_checkpoint = os.path.join(restore_path, RecordingParameters.MODEL_SAVE)
+        path_checkpoint = os.path.join(retrain_path, RecordingParameters.MODEL_SAVE)
         net_dict = torch.load(path_checkpoint)
 
     if RecordingParameters.WANDB:
-        if RecordingParameters.RETRAIN:
-            wandb_id = None
-        else:
+        if wandb_id is None:
             wandb_id = wandb.util.generate_id()
         wandb.init(project=RecordingParameters.EXPERIMENT_PROJECT,
                    name=RecordingParameters.EXPERIMENT_NAME,
@@ -251,7 +249,13 @@ def train_model():
 
     except KeyboardInterrupt:
         print("[ERROR] KeyboardInterrupt! Killing remote workers! \n")
-
+        status = 'stopped'
+    except Exception as e:
+        print('[ERROR]', e, '\n')
+        print('[ERROR] Unknown error! Killing remote workers! \n')
+        status = 'falied'
+    else:
+        status = 'success'
     finally:
         # Save final model
         print('Saving final model ...')
@@ -271,6 +275,7 @@ def train_model():
             # Save final model to wandb
             wandb.save(final_model_path, final_model_dir, policy='now')
             wandb.finish()
+        return status, wandb_id
 
 
 def evaluate(eval_env, episodic_buffer, model, device, save_gif, curr_steps, greedy):
