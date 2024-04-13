@@ -13,19 +13,19 @@ from alg_parameters import (SetupParameters, NetParameters, EnvParameters,
 # Must provide a unique expt_name for each configuration
 CONFIG_SETS = [
     {
-        'expt_name': 'expt_1',
+        'expt_name': 'example_expt_1',
         'params': [
-            [RecordingParameters, 'DIST_FACTOR', 0.1],
-            [RecordingParameters, 'BLOCK_FACTOR', 0.1],
-            [RecordingParameters, 'CONGESTION_FACTOR', 0.1],
+            [TieBreakingParameters, 'DIST_FACTOR', 0.1],
+            [TieBreakingParameters, 'BLOCK_FACTOR', 0.1],
+            [TieBreakingParameters, 'CONGESTION_FACTOR', 0.1],
         ]
     },
     {
-        'expt_name': 'expt_2',
+        'expt_name': 'example_expt_2',
         'params': [
-            [RecordingParameters, 'DIST_FACTOR', 0.1],
-            [RecordingParameters, 'BLOCK_FACTOR', 0.2],
-            [RecordingParameters, 'CONGESTION_FACTOR', 0.3],
+            [TieBreakingParameters, 'DIST_FACTOR', 0.1],
+            [TieBreakingParameters, 'BLOCK_FACTOR', 0.2],
+            [TieBreakingParameters, 'CONGESTION_FACTOR', 0.3],
         ]
     },
 ]
@@ -49,6 +49,7 @@ def multi_train(wandb_id=None, retrain_path=None):
             RecordingParameters.RETRAIN = True
         else:
             RecordingParameters.RETRAIN = False
+            wandb_id = None
 
         for _ in range(10):  # retry 10 times
             status, wandb_id = train_model(wandb_id, retrain_path)
