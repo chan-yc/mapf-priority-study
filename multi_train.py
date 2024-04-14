@@ -59,6 +59,8 @@ def multi_train(wandb_id=None, retrain_path=None):
                 RecordingParameters.RETRAIN = True
                 retrain_path = os.path.join(RecordingParameters.MODEL_PATH, 'final')
 
+        retrain_path = None
+
 
 def update_expt_info(name):
     """Update experiment information"""
