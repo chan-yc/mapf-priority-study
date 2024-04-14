@@ -52,7 +52,6 @@ class NetParameters:
     D_V = 32
 
 
-# TODO Examinate the distance factor! Add more factors if needed
 class TieBreakingParameters:
     DIST_FACTOR = 0.1          # mu
     BLOCK_FACTOR = 0.1         # beta
@@ -83,7 +82,7 @@ class RecordingParameters:
     ENTITY = ''
     TIME = datetime.datetime.now().strftime('%Y%m%d_%H%M')
     EXPERIMENT_PROJECT = 'MAPF'
-    EXPERIMENT_NAME = 'SCRIMP_UPDATE'
+    EXPERIMENT_NAME = 'SCRIMP_STUDY'
     EXPERIMENT_NOTE = ''
     SAVE_INTERVAL = 5e5  # interval of saving model
     BEST_INTERVAL = 0  # interval of saving model with the best performance
