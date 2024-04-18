@@ -316,7 +316,6 @@ class State(object):
         congestions = np.asarray(congestions) / (np.sum(congestions) + 1e-6)
         # print("Normalized Congestion:", congestions)
 
-        # TODO change the priority prob
         diffs = np.asarray(diffs, dtype=np.float32) \
             + TieBreakingParameters.DIST_FACTOR * distance \
             + TieBreakingParameters.BLOCK_FACTOR * blocks \
